@@ -57,6 +57,61 @@
         }
       }
     },
+    "tooltipSettings": {
+      "displayName": "Tooltips",
+      "properties": {
+        "enabled": {
+          "displayName": "Enabled",
+          "type": { "bool": true }
+        },
+        "style": {
+          "displayName": "Style",
+          "type": {
+            "enumeration": [
+              { "value": "powerbi", "displayName": "Power BI" },
+              { "value": "custom", "displayName": "Custom" }
+            ]
+          }
+        },
+        "theme": {
+          "displayName": "Theme",
+          "type": {
+            "enumeration": [
+              { "value": "light", "displayName": "Light" },
+              { "value": "dark", "displayName": "Dark" }
+            ]
+          }
+        },
+        "backgroundColor": {
+          "displayName": "Background",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "textColor": {
+          "displayName": "Text Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "borderColor": {
+          "displayName": "Border Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "borderRadius": {
+          "displayName": "Border Radius",
+          "type": { "numeric": true }
+        },
+        "shadow": {
+          "displayName": "Shadow",
+          "type": { "bool": true }
+        },
+        "maxWidth": {
+          "displayName": "Max Width",
+          "type": { "numeric": true }
+        },
+        "showColorSwatch": {
+          "displayName": "Show Color Swatch",
+          "type": { "bool": true }
+        }
+      }
+    },
     "customColors": {
       "displayName": "Custom Colors",
       "properties": {

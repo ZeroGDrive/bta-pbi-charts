@@ -13,6 +13,7 @@ import ISelectionId = powerbi.visuals.ISelectionId;
 
 import {
     RenderContext,
+    createTooltipCard,
     readCategoryColorsFromDataView,
     findCategoryIndex,
     getSchemeColors,
@@ -86,6 +87,7 @@ export class Visual implements IVisual {
             svg: this.svg,
             container: this.container,
             tooltipService: this.tooltipService,
+            root: this.target,
             width,
             height
         };
@@ -195,6 +197,8 @@ export class Visual implements IVisual {
                 }]
             });
         }
+
+        cards.push(createTooltipCard(this.settings.tooltip));
 
         // Y-Axis card
         cards.push({

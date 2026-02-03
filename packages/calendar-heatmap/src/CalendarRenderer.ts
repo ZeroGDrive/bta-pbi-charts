@@ -194,10 +194,12 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                     });
 
                     this.addTooltip(cell as any, [
-                        { displayName: "Date", value: dateStr },
-                        { displayName: "Value", value: value.toString() },
-                        ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
-                    ]);
+                        { displayName: "Value", value: value.toLocaleString() }
+                    ], {
+                        title: dateStr,
+                        subtitle: groupName !== "All" ? groupName : undefined,
+                        color: value === 0 ? "#ebedf0" : (colorScale(value) as string)
+                    });
 
                     // Hover effect
                     cell

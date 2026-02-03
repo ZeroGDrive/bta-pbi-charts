@@ -7,11 +7,13 @@ import VisualTooltipDataItem = powerbi.extensibility.VisualTooltipDataItem;
 import { IBaseVisualSettings, colorSchemes } from "./settings";
 import { formatLabel } from "./textUtils";
 import { renderEmptyState } from "./emptyState";
+import { HtmlTooltip, TooltipMeta, toTooltipRows } from "./tooltip";
 
 export interface RenderContext {
     svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
     container: d3.Selection<SVGGElement, unknown, null, undefined>;
     tooltipService: ITooltipService;
+    root: HTMLElement;
     width: number;
     height: number;
 }
@@ -39,6 +41,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
     protected context: RenderContext;
     protected settings!: TSettings;
     private static gradientCounter: number = 0;
+    private htmlTooltip: HtmlTooltip | null = null;
 
     constructor(context: RenderContext) {
         this.context = context;
@@ -119,8 +122,35 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
 
     protected addTooltip(
         element: d3.Selection<SVGElement, unknown, null, undefined>,
-        tooltipData: VisualTooltipDataItem[]
+        tooltipData: VisualTooltipDataItem[],
+        meta?: TooltipMeta
     ): void {
+        if (!this.settings.tooltip?.enabled) {
+            return;
+        }
+
+        if (this.settings.tooltip.style === "custom" && typeof document !== "undefined") {
+            if (!this.htmlTooltip) {
+                this.htmlTooltip = new HtmlTooltip(this.context.root, this.settings.tooltip);
+            } else {
+                this.htmlTooltip.updateSettings(this.settings.tooltip);
+            }
+
+            const tooltip = this.htmlTooltip;
+
+            element
+                .on("mouseover", function (event: MouseEvent) {
+                    tooltip.show({ meta, rows: toTooltipRows(tooltipData) }, event.clientX, event.clientY);
+                })
+                .on("mousemove", function (event: MouseEvent) {
+                    tooltip.move(event.clientX, event.clientY);
+                })
+                .on("mouseout", function () {
+                    tooltip.hide();
+                });
+            return;
+        }
+
         const tooltipService = this.context.tooltipService;
 
         element
@@ -145,6 +175,41 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                     immediately: true,
                     isTouchEvent: false
                 });
+            });
+    }
+
+    protected addTooltipDynamic(
+        element: d3.Selection<SVGElement, unknown, null, undefined>,
+        getData: (event: MouseEvent) => { tooltipData: VisualTooltipDataItem[]; meta?: TooltipMeta }
+    ): void {
+        if (!this.settings.tooltip?.enabled) {
+            return;
+        }
+
+        // Only supported for custom tooltips.
+        if (this.settings.tooltip.style !== "custom" || typeof document === "undefined") {
+            return;
+        }
+
+        if (!this.htmlTooltip) {
+            this.htmlTooltip = new HtmlTooltip(this.context.root, this.settings.tooltip);
+        } else {
+            this.htmlTooltip.updateSettings(this.settings.tooltip);
+        }
+
+        const tooltip = this.htmlTooltip;
+
+        element
+            .on("mouseover", function (event: MouseEvent) {
+                const { tooltipData, meta } = getData(event);
+                tooltip.show({ meta, rows: toTooltipRows(tooltipData) }, event.clientX, event.clientY);
+            })
+            .on("mousemove", function (event: MouseEvent) {
+                const { tooltipData, meta } = getData(event);
+                tooltip.show({ meta, rows: toTooltipRows(tooltipData) }, event.clientX, event.clientY);
+            })
+            .on("mouseout", function () {
+                tooltip.hide();
             });
     }
 
@@ -244,7 +309,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                     .text(displayText);
 
                 if (displayText !== cat) {
-                    this.addTooltip(itemGroup as any, [{ displayName: "Category", value: cat }]);
+                    this.addTooltip(itemGroup as any, [{ displayName: "Category", value: cat }], { title: cat, color: ordinalScale(cat) });
                 }
             });
         } else {

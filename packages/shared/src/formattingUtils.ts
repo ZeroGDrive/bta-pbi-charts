@@ -3,7 +3,7 @@
 import powerbi from "powerbi-visuals-api";
 import ISelectionId = powerbi.visuals.ISelectionId;
 import DataView = powerbi.DataView;
-import { ColorScheme, RotateLabelsMode } from "./settings";
+import { ColorScheme, RotateLabelsMode, ITooltipSettings } from "./settings";
 
 /**
  * Gets the array of colors for a given color scheme.
@@ -670,6 +670,129 @@ export function createGeneralCard(settings: {
             displayName: "Settings",
             uid: "general_group",
             slices
+        }]
+    };
+}
+
+export function createTooltipCard(settings: ITooltipSettings): powerbi.visuals.FormattingCard {
+    return {
+        displayName: "Tooltips",
+        uid: "tooltip_card",
+        groups: [{
+            displayName: "Style",
+            uid: "tooltip_group",
+            slices: [
+                {
+                    uid: "tooltip_enabled",
+                    displayName: "Enabled",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "enabled" },
+                            value: settings.enabled
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_style",
+                    displayName: "Style",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.Dropdown,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "style" },
+                            value: settings.style
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_theme",
+                    displayName: "Theme",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.Dropdown,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "theme" },
+                            value: settings.theme
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_backgroundColor",
+                    displayName: "Background",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.ColorPicker,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "backgroundColor" },
+                            value: { value: settings.backgroundColor }
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_textColor",
+                    displayName: "Text Color",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.ColorPicker,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "textColor" },
+                            value: { value: settings.textColor }
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_borderColor",
+                    displayName: "Border Color",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.ColorPicker,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "borderColor" },
+                            value: { value: settings.borderColor }
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_borderRadius",
+                    displayName: "Border Radius",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.NumUpDown,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "borderRadius" },
+                            value: settings.borderRadius
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_shadow",
+                    displayName: "Shadow",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "shadow" },
+                            value: settings.shadow
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_maxWidth",
+                    displayName: "Max Width",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.NumUpDown,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "maxWidth" },
+                            value: settings.maxWidth
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice,
+                {
+                    uid: "tooltip_showColorSwatch",
+                    displayName: "Show Color Swatch",
+                    control: {
+                        type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                        properties: {
+                            descriptor: { objectName: "tooltipSettings", propertyName: "showColorSwatch" },
+                            value: settings.showColorSwatch
+                        }
+                    }
+                } as powerbi.visuals.FormattingSlice
+            ]
         }]
     };
 }

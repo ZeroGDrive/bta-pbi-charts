@@ -12,7 +12,10 @@ import {
     defaultSmallMultiplesSettings,
     defaultLegendSettings,
     defaultCustomColorSettings,
-    defaultFontScaleFactor
+    defaultFontScaleFactor,
+    defaultTooltipSettings,
+    TooltipStyle,
+    TooltipTheme
 } from "@pbi-visuals/shared";
 
 export interface ICalendarSettings {
@@ -49,6 +52,7 @@ export const defaultSettings: ICalendarVisualSettings = {
     rotateXLabels: "never",  // Calendar doesn't use X-axis rotation but needs the property
     responsiveText: true,
     fontScaleFactor: defaultFontScaleFactor,
+    tooltip: { ...defaultTooltipSettings },
     useCustomColors: defaultCustomColorSettings.useCustomColors,
     customColors: [...defaultCustomColorSettings.customColors],
     calendar: {
@@ -104,6 +108,29 @@ export function parseSettings(dataView: DataView): ICalendarVisualSettings {
         settings.fontScaleFactor = (generalObj["fontScaleFactor"] as number) ?? defaultSettings.fontScaleFactor;
         // Clamp font scale factor between 0.5 and 2.0
         settings.fontScaleFactor = Math.max(0.5, Math.min(2.0, settings.fontScaleFactor));
+    }
+
+    // Tooltip settings
+    const tooltipObj = objects["tooltipSettings"];
+    if (tooltipObj) {
+        settings.tooltip.enabled = (tooltipObj["enabled"] as boolean) ?? defaultSettings.tooltip.enabled;
+        settings.tooltip.style = (tooltipObj["style"] as TooltipStyle) ?? defaultSettings.tooltip.style;
+        settings.tooltip.theme = (tooltipObj["theme"] as TooltipTheme) ?? defaultSettings.tooltip.theme;
+
+        const bg = tooltipObj["backgroundColor"] as any;
+        const border = tooltipObj["borderColor"] as any;
+        const text = tooltipObj["textColor"] as any;
+        if (bg?.solid?.color) settings.tooltip.backgroundColor = bg.solid.color;
+        if (border?.solid?.color) settings.tooltip.borderColor = border.solid.color;
+        if (text?.solid?.color) settings.tooltip.textColor = text.solid.color;
+
+        settings.tooltip.borderRadius = (tooltipObj["borderRadius"] as number) ?? defaultSettings.tooltip.borderRadius;
+        settings.tooltip.shadow = (tooltipObj["shadow"] as boolean) ?? defaultSettings.tooltip.shadow;
+        settings.tooltip.maxWidth = (tooltipObj["maxWidth"] as number) ?? defaultSettings.tooltip.maxWidth;
+        settings.tooltip.showColorSwatch = (tooltipObj["showColorSwatch"] as boolean) ?? defaultSettings.tooltip.showColorSwatch;
+
+        settings.tooltip.borderRadius = Math.max(0, Math.min(24, settings.tooltip.borderRadius));
+        settings.tooltip.maxWidth = Math.max(160, Math.min(560, settings.tooltip.maxWidth));
     }
 
     // Custom colors settings

@@ -19,6 +19,7 @@ import {
     createLegendCard,
     createSmallMultiplesCard,
     createTextSizesCard,
+    createTooltipCard,
     createYAxisCard,
     renderEmptyState
 } from "@pbi-visuals/shared";
@@ -75,6 +76,7 @@ export class Visual implements IVisual {
             svg: this.svg,
             container: this.container,
             tooltipService: this.tooltipService,
+            root: this.target,
             width,
             height
         };
@@ -118,6 +120,8 @@ export class Visual implements IVisual {
             responsiveText: this.settings.responsiveText,
             fontScaleFactor: this.settings.fontScaleFactor
         }));
+
+        cards.push(createTooltipCard(this.settings.tooltip));
 
         cards.push(createColorSchemeCard(this.settings.colorScheme));
 

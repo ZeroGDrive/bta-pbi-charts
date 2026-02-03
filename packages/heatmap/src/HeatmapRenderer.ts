@@ -162,11 +162,13 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
 
                     // Add tooltip
                     this.addTooltip(cell as any, [
-                        { displayName: "Category", value: yVal },
-                        { displayName: "Period", value: xVal },
-                        { displayName: "Value", value: value.toString() },
+                        { displayName: "Value", value: value.toLocaleString() },
                         ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
-                    ]);
+                    ], {
+                        title: yVal,
+                        subtitle: xVal,
+                        color: value === 0 ? "#f0f0f0" : (colorScale(value) as string)
+                    });
 
                     // Value label - use manual override or proportional sizing
                     if (settings.heatmap.showValues && value > 0) {

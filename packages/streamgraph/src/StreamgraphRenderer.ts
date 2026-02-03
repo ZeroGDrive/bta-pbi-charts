@@ -24,6 +24,15 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
         // Streamgraph doesn't render a Y-axis yet; avoid reserving empty left space.
         const leftMargin = 20;
 
+        const formatXLabel = (val: string): string => {
+            const date = new Date(val);
+            if (!isNaN(date.getTime())) {
+                return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+            }
+            return val;
+        };
+        const xDisplayLabels = xValues.map(formatXLabel);
+
         const margin = {
             top: 40,
             right: 20,
@@ -124,20 +133,40 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
 
             // Draw streams
             series.forEach((s, i) => {
+                const category = groupYValues[i];
+                const categoryColor = colorScale(category);
+
                 const path = panelGroup.append("path")
                     .datum(s)
                     .attr("class", "stream-layer")
                     .attr("d", area)
-                    .attr("fill", colorScale(groupYValues[i]))
+                    .attr("fill", categoryColor)
                     .attr("opacity", settings.streamgraph.opacity)
                     .attr("stroke", "none");
 
-                // Add tooltip on hover
-                const tooltipData = [
-                    { displayName: "Category", value: groupYValues[i] },
-                    ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
-                ];
-                this.addTooltip(path as any, tooltipData);
+                // Tooltips
+                if (settings.tooltip.style === "custom") {
+                    this.addTooltipDynamic(path as any, (event: MouseEvent) => {
+                        const node = panelGroup.node() as any;
+                        const [px] = d3.pointer(event, node);
+                        const rawIndex = Math.round(xScale.invert(px));
+                        const index = Math.max(0, Math.min(xValues.length - 1, rawIndex));
+                        const rawValue = (stackInput[index]?.[category] ?? 0) as number;
+
+                        return {
+                            meta: { title: category, subtitle: xDisplayLabels[index], color: categoryColor },
+                            tooltipData: [
+                                { displayName: "Value", value: rawValue.toLocaleString() },
+                                ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
+                            ]
+                        };
+                    });
+                } else {
+                    this.addTooltip(path as any, [
+                        { displayName: "Category", value: category },
+                        ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
+                    ]);
+                }
 
                 // Hover effect
                 path
@@ -160,15 +189,6 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                     settings.xAxisFontSize,
                     8, 18
                 );
-
-                const formatXLabel = (val: string): string => {
-                    const date = new Date(val);
-                    if (!isNaN(date.getTime())) {
-                        return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
-                    }
-                    return val;
-                };
-                const xDisplayLabels = xValues.map(formatXLabel);
 
                 // Smart rotation detection
                 const rotationResult = calculateLabelRotation({

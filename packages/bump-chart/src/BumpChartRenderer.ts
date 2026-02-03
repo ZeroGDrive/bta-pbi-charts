@@ -48,6 +48,8 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
             return val;
         };
         const xDisplayLabels = xValues.map(formatXLabel);
+        const xLabelByValue = new Map<string, string>();
+        xValues.forEach((v, i) => xLabelByValue.set(v, xDisplayLabels[i]));
 
         // Calculate left label margin using real text measurement
         const maxYLabelWidth = measureMaxLabelWidth(yValues, yAxisFontSize, "Inter, sans-serif");
@@ -247,6 +249,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                     points.forEach(point => {
                         const cx = xScale(point.xValue) ?? 0;
                         const cy = yScale(point.rank);
+                        const periodLabel = xLabelByValue.get(point.xValue) ?? point.xValue;
 
                         const marker = panelGroup.append("circle")
                             .attr("class", "bump-marker")
@@ -258,12 +261,10 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                             .attr("stroke-width", 1);
 
                         this.addTooltip(marker as any, [
-                            { displayName: "Category", value: yVal },
-                            { displayName: "Period", value: point.xValue },
-                            { displayName: "Rank", value: point.rank.toString() },
-                            { displayName: "Value", value: point.value.toString() },
+                            { displayName: "Rank", value: `#${point.rank}` },
+                            { displayName: "Value", value: point.value.toLocaleString() },
                             ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
-                        ]);
+                        ], { title: yVal, subtitle: periodLabel, color });
 
                         marker
                             .on("mouseenter", function () {
@@ -422,7 +423,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                 .text(item.displayText);
 
             if (item.displayText !== item.category) {
-                this.addTooltip(itemGroup as any, [{ displayName: "Category", value: item.category }]);
+                this.addTooltip(itemGroup as any, [{ displayName: "Category", value: item.category }], { title: item.category, color: colorScale(item.category) });
             }
         });
     }

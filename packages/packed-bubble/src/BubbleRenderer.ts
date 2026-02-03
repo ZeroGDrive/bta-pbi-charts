@@ -159,10 +159,12 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
             bubbles.each((d, i, nodes) => {
                 const bubble = d3.select(nodes[i]);
                 this.addTooltip(bubble as any, [
-                    { displayName: "Category", value: d.category },
-                    { displayName: "Value", value: d.value.toLocaleString() },
-                    ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
-                ]);
+                    { displayName: "Value", value: d.value.toLocaleString() }
+                ], {
+                    title: d.category,
+                    subtitle: groupName !== "All" ? groupName : undefined,
+                    color: colorScale(d.category)
+                });
             });
 
             // Draw labels inside bubbles (if enabled and bubble is large enough)

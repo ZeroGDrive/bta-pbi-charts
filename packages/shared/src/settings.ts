@@ -10,6 +10,8 @@ export type LegendPosition = "top" | "right" | "bottom";
 export type CellSize = "small" | "medium" | "large";
 export type WeekStart = "sunday" | "monday";
 export type RotateLabelsMode = "auto" | "always" | "never";
+export type TooltipStyle = "powerbi" | "custom";
+export type TooltipTheme = "light" | "dark";
 
 // Shared settings interfaces
 export interface ISmallMultiplesSettings {
@@ -41,6 +43,19 @@ export interface IAxisSettings {
     rotateXLabels: RotateLabelsMode;  // Control X-axis label rotation
 }
 
+export interface ITooltipSettings {
+    enabled: boolean;
+    style: TooltipStyle;
+    theme: TooltipTheme;
+    backgroundColor: string;
+    borderColor: string;
+    textColor: string;
+    borderRadius: number;
+    shadow: boolean;
+    maxWidth: number;
+    showColorSwatch: boolean;
+}
+
 /**
  * Text size settings for manual font size control
  * Value of 0 means "auto/responsive", positive values (8-32) are manual overrides
@@ -62,12 +77,26 @@ export const defaultTextSizeSettings: ITextSizeSettings = {
     panelTitleFontSize: 0
 };
 
+export const defaultTooltipSettings: ITooltipSettings = {
+    enabled: true,
+    style: "custom",
+    theme: "light",
+    backgroundColor: "#ffffff",
+    borderColor: "#e5e7eb",
+    textColor: "#111827",
+    borderRadius: 10,
+    shadow: true,
+    maxWidth: 320,
+    showColorSwatch: true
+};
+
 // Base settings interface that all visuals extend
 export interface IBaseVisualSettings extends ILegendSettings, IAxisSettings, ICustomColorSettings {
     colorScheme: ColorScheme;
     smallMultiples: ISmallMultiplesSettings;
     responsiveText: boolean;  // NEW - enable/disable responsive scaling
     fontScaleFactor: number;  // Controls how aggressively fonts scale (0.5-2.0, default 1.0)
+    tooltip: ITooltipSettings;
 }
 
 // Color scheme constants - expanded
