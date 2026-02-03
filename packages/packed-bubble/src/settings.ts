@@ -1,0 +1,160 @@
+"use strict";
+
+import powerbi from "powerbi-visuals-api";
+import DataView = powerbi.DataView;
+import {
+    IBaseVisualSettings,
+    ColorScheme,
+    LegendPosition,
+    defaultSmallMultiplesSettings,
+    defaultLegendSettings,
+    defaultCustomColorSettings,
+    defaultFontScaleFactor
+} from "@pbi-visuals/shared";
+
+export interface IBubbleSettings {
+    minBubbleSize: number;
+    maxBubbleSize: number;
+    showLabels: boolean;
+    clusterByCategory: boolean;
+    labelSizeMode: "auto" | "fixed";  // NEW
+    labelFontSize: number;            // NEW (used when fixed)
+    minLabelFontSize: number;         // NEW (min for auto)
+    maxLabelFontSize: number;         // NEW (max for auto)
+}
+
+export interface IBubbleTextSizeSettings {
+    legendFontSize: number;       // 0 = auto, 8-32 = manual
+    panelTitleFontSize: number;   // 0 = auto, 8-32 = manual
+}
+
+export interface IBubbleVisualSettings extends IBaseVisualSettings {
+    bubble: IBubbleSettings;
+    textSizes: IBubbleTextSizeSettings;
+}
+
+export const defaultSettings: IBubbleVisualSettings = {
+    colorScheme: "blues",
+    showLegend: true,
+    legendPosition: "right",
+    legendFontSize: defaultLegendSettings.legendFontSize!,
+    maxLegendItems: defaultLegendSettings.maxLegendItems!,
+    showXAxis: false,
+    xAxisFontSize: 10,
+    showYAxis: false,
+    yAxisFontSize: 11,
+    rotateXLabels: "never",  // Packed bubble doesn't use X-axis but needs the property
+    responsiveText: true,
+    fontScaleFactor: defaultFontScaleFactor,
+    useCustomColors: defaultCustomColorSettings.useCustomColors,
+    customColors: [...defaultCustomColorSettings.customColors],
+    bubble: {
+        minBubbleSize: 15,
+        maxBubbleSize: 60,
+        showLabels: true,
+        clusterByCategory: true,
+        labelSizeMode: "auto",
+        labelFontSize: 12,
+        minLabelFontSize: 8,
+        maxLabelFontSize: 16
+    },
+    textSizes: {
+        legendFontSize: 0,
+        panelTitleFontSize: 0
+    },
+    smallMultiples: { ...defaultSmallMultiplesSettings }
+};
+
+export function parseSettings(dataView: DataView): IBubbleVisualSettings {
+    const objects = dataView?.metadata?.objects;
+    const settings: IBubbleVisualSettings = JSON.parse(JSON.stringify(defaultSettings));
+
+    if (!objects) {
+        return settings;
+    }
+
+    // Color scheme
+    const colorSchemeObj = objects["colorScheme"];
+    if (colorSchemeObj) {
+        settings.colorScheme = (colorSchemeObj["scheme"] as ColorScheme) ?? defaultSettings.colorScheme;
+    }
+
+    // Legend settings
+    const legendObj = objects["legend"];
+    if (legendObj) {
+        settings.showLegend = (legendObj["show"] as boolean) ?? defaultSettings.showLegend;
+        settings.legendPosition = (legendObj["position"] as LegendPosition) ?? defaultSettings.legendPosition;
+        settings.legendFontSize = (legendObj["fontSize"] as number) ?? defaultSettings.legendFontSize;
+        settings.maxLegendItems = (legendObj["maxItems"] as number) ?? defaultSettings.maxLegendItems;
+    }
+
+    // Responsive text setting (from general settings)
+    const generalObj = objects["general"];
+    if (generalObj) {
+        settings.responsiveText = (generalObj["responsiveText"] as boolean) ?? defaultSettings.responsiveText;
+        settings.fontScaleFactor = (generalObj["fontScaleFactor"] as number) ?? defaultSettings.fontScaleFactor;
+        // Clamp font scale factor between 0.5 and 2.0
+        settings.fontScaleFactor = Math.max(0.5, Math.min(2.0, settings.fontScaleFactor));
+    }
+
+    // Custom colors settings
+    const customColorsObj = objects["customColors"];
+    if (customColorsObj) {
+        settings.useCustomColors = (customColorsObj["useCustomColors"] as boolean) ?? defaultSettings.useCustomColors;
+
+        // Parse comma-separated color list
+        const colorListStr = customColorsObj["colorList"] as string;
+        if (colorListStr && typeof colorListStr === "string" && colorListStr.trim()) {
+            const parsedColors = colorListStr
+                .split(",")
+                .map(c => c.trim())
+                .filter(c => c.length > 0 && (c.startsWith("#") || c.match(/^[a-fA-F0-9]{6}$/)));
+
+            settings.customColors = parsedColors.map(c => c.startsWith("#") ? c : `#${c}`);
+        }
+    }
+
+    // Bubble settings
+    const bubbleObj = objects["bubbleSettings"];
+    if (bubbleObj) {
+        settings.bubble.minBubbleSize = (bubbleObj["minBubbleSize"] as number) ?? defaultSettings.bubble.minBubbleSize;
+        settings.bubble.maxBubbleSize = (bubbleObj["maxBubbleSize"] as number) ?? defaultSettings.bubble.maxBubbleSize;
+        settings.bubble.showLabels = (bubbleObj["showLabels"] as boolean) ?? defaultSettings.bubble.showLabels;
+        settings.bubble.clusterByCategory = (bubbleObj["clusterByCategory"] as boolean) ?? defaultSettings.bubble.clusterByCategory;
+        settings.bubble.labelSizeMode = (bubbleObj["labelSizeMode"] as "auto" | "fixed") ?? defaultSettings.bubble.labelSizeMode;
+        settings.bubble.labelFontSize = (bubbleObj["labelFontSize"] as number) ?? defaultSettings.bubble.labelFontSize;
+        settings.bubble.minLabelFontSize = (bubbleObj["minLabelFontSize"] as number) ?? defaultSettings.bubble.minLabelFontSize;
+        settings.bubble.maxLabelFontSize = (bubbleObj["maxLabelFontSize"] as number) ?? defaultSettings.bubble.maxLabelFontSize;
+        // Clamp values
+        settings.bubble.minBubbleSize = Math.max(10, Math.min(30, settings.bubble.minBubbleSize));
+        settings.bubble.maxBubbleSize = Math.max(40, Math.min(100, settings.bubble.maxBubbleSize));
+        settings.bubble.labelFontSize = Math.max(6, Math.min(24, settings.bubble.labelFontSize));
+        settings.bubble.minLabelFontSize = Math.max(6, Math.min(14, settings.bubble.minLabelFontSize));
+        settings.bubble.maxLabelFontSize = Math.max(10, Math.min(24, settings.bubble.maxLabelFontSize));
+    }
+
+    // Text Sizes settings
+    const textSizesObj = objects["textSizes"];
+    if (textSizesObj) {
+        settings.textSizes.legendFontSize = (textSizesObj["legendFontSize"] as number) ?? defaultSettings.textSizes.legendFontSize;
+        settings.textSizes.panelTitleFontSize = (textSizesObj["panelTitleFontSize"] as number) ?? defaultSettings.textSizes.panelTitleFontSize;
+        // Clamp values (0 = auto, 8-32 = manual)
+        settings.textSizes.legendFontSize = settings.textSizes.legendFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.legendFontSize));
+        settings.textSizes.panelTitleFontSize = settings.textSizes.panelTitleFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.panelTitleFontSize));
+    }
+
+    // Small Multiples settings
+    const smallMultObj = objects["smallMultiples"];
+    if (smallMultObj) {
+        settings.smallMultiples.columns = (smallMultObj["columns"] as number) ?? defaultSettings.smallMultiples.columns;
+        settings.smallMultiples.spacing = (smallMultObj["spacing"] as number) ?? defaultSettings.smallMultiples.spacing;
+        settings.smallMultiples.showTitle = (smallMultObj["showTitle"] as boolean) ?? defaultSettings.smallMultiples.showTitle;
+        settings.smallMultiples.titleFontSize = (smallMultObj["titleFontSize"] as number) ?? defaultSettings.smallMultiples.titleFontSize;
+        settings.smallMultiples.titleSpacing = (smallMultObj["titleSpacing"] as number) ?? defaultSettings.smallMultiples.titleSpacing;
+        settings.smallMultiples.columns = Math.max(1, Math.min(6, settings.smallMultiples.columns));
+        settings.smallMultiples.spacing = Math.max(10, Math.min(50, settings.smallMultiples.spacing));
+        settings.smallMultiples.titleSpacing = Math.max(10, Math.min(50, settings.smallMultiples.titleSpacing));
+    }
+
+    return settings;
+}

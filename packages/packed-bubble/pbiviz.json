@@ -1,0 +1,25 @@
+{
+  "visual": {
+    "name": "packedBubbleVisual",
+    "displayName": "Packed Bubble",
+    "guid": "packedBubbleVisualE5F678901234567890123456789EFG01",
+    "visualClassName": "Visual",
+    "version": "1.0.0.0",
+    "description": "A packed bubble chart visualization for Power BI with force simulation, category clustering, and customizable bubble sizes.",
+    "supportUrl": "https://github.com/example/bta-pbi-charts",
+    "gitHubUrl": ""
+  },
+  "apiVersion": "5.3.0",
+  "author": {
+    "name": "Custom Visual Developer",
+    "email": "developer@example.com"
+  },
+  "assets": {
+    "icon": "assets/icon.png"
+  },
+  "externalJS": null,
+  "style": "style/visual.less",
+  "capabilities": "capabilities.json",
+  "dependencies": null,
+  "stringResources": []
+}

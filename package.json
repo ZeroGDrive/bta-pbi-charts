@@ -1,0 +1,31 @@
+{
+  "name": "bta-pbi-charts",
+  "packageManager": "bun@1.3.8",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:shared": "bun run --filter @pbi-visuals/shared build",
+    "collect:dist": "node scripts/collect-dist.mjs",
+    "build:all": "bun run build:shared && bun run --workspaces --if-present package && bun run collect:dist",
+    "package:heatmap": "bun run --filter @pbi-visuals/heatmap package",
+    "package:streamgraph": "bun run --filter @pbi-visuals/streamgraph package",
+    "package:bump-chart": "bun run --filter @pbi-visuals/bump-chart package",
+    "package:calendar": "bun run --filter @pbi-visuals/calendar-heatmap package",
+    "package:bubble": "bun run --filter @pbi-visuals/packed-bubble package",
+    "start:heatmap": "bun run --filter @pbi-visuals/heatmap start",
+    "start:streamgraph": "bun run --filter @pbi-visuals/streamgraph start",
+    "start:bump-chart": "bun run --filter @pbi-visuals/bump-chart start",
+    "start:calendar": "bun run --filter @pbi-visuals/calendar-heatmap start",
+    "start:bubble": "bun run --filter @pbi-visuals/packed-bubble start"
+  },
+  "dependencies": {
+    "powerbi-visuals-utils-formattingmodel": "^6.2.2"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,254 @@
+{
+  "dataRoles": [
+    {
+      "displayName": "Date",
+      "name": "xAxis",
+      "kind": "Grouping",
+      "description": "Date field for the calendar"
+    },
+    {
+      "displayName": "Values",
+      "name": "values",
+      "kind": "Measure",
+      "description": "The measure to display for each date"
+    },
+    {
+      "displayName": "Group By",
+      "name": "groupBy",
+      "kind": "Grouping",
+      "description": "Field used to split into separate panels (small multiples)"
+    }
+  ],
+  "tooltips": {
+    "supportedTypes": {
+      "default": true,
+      "canvas": true
+    },
+    "roles": ["tooltips"]
+  },
+  "objects": {
+    "categoryColors": {
+      "displayName": "Data Colors",
+      "properties": {
+        "fill": {
+          "displayName": "Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        }
+      }
+    },
+    "general": {
+      "displayName": "General",
+      "properties": {
+        "responsiveText": {
+          "displayName": "Responsive Text",
+          "description": "Scale text size based on chart dimensions",
+          "type": { "bool": true }
+        },
+        "fontScaleFactor": {
+          "displayName": "Font Scale Factor",
+          "description": "Adjust font size scaling (0.5 = smaller, 2.0 = larger)",
+          "type": { "numeric": true }
+        }
+      }
+    },
+    "customColors": {
+      "displayName": "Custom Colors",
+      "properties": {
+        "useCustomColors": {
+          "displayName": "Use Custom Colors",
+          "description": "Enable custom colors for each data category",
+          "type": { "bool": true }
+        },
+        "colorList": {
+          "displayName": "Colors",
+          "description": "Comma-separated hex colors (e.g., #ff0000, #00ff00, #0000ff)",
+          "type": { "text": true }
+        }
+      }
+    },
+    "colorScheme": {
+      "displayName": "Color Scheme",
+      "properties": {
+        "scheme": {
+          "displayName": "Color Scheme",
+          "type": {
+            "enumeration": [
+              { "value": "blues", "displayName": "Blues" },
+              { "value": "greens", "displayName": "Greens" },
+              { "value": "reds", "displayName": "Reds" },
+              { "value": "purples", "displayName": "Purples" },
+              { "value": "oranges", "displayName": "Oranges" },
+              { "value": "teals", "displayName": "Teals" },
+              { "value": "pinks", "displayName": "Pinks" },
+              { "value": "warm", "displayName": "Warm" },
+              { "value": "rainbow", "displayName": "Rainbow" },
+              { "value": "pastel", "displayName": "Pastel" },
+              { "value": "vibrant", "displayName": "Vibrant" }
+            ]
+          }
+        }
+      }
+    },
+    "legend": {
+      "displayName": "Legend",
+      "properties": {
+        "show": {
+          "displayName": "Show Legend",
+          "type": { "bool": true }
+        },
+        "position": {
+          "displayName": "Position",
+          "type": {
+            "enumeration": [
+              { "value": "right", "displayName": "Right" },
+              { "value": "bottom", "displayName": "Bottom" }
+            ]
+          }
+        },
+        "fontSize": {
+          "displayName": "Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "maxItems": {
+          "displayName": "Max Items",
+          "description": "Maximum number of legend items to display",
+          "type": { "numeric": true }
+        }
+      }
+    },
+    "yAxisSettings": {
+      "displayName": "Day Labels",
+      "properties": {
+        "show": {
+          "displayName": "Show Day Labels",
+          "type": { "bool": true }
+        },
+        "fontSize": {
+          "displayName": "Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        }
+      }
+    },
+    "calendarSettings": {
+      "displayName": "Calendar",
+      "properties": {
+        "cellSize": {
+          "displayName": "Cell Size",
+          "type": {
+            "enumeration": [
+              { "value": "small", "displayName": "Small" },
+              { "value": "medium", "displayName": "Medium" },
+              { "value": "large", "displayName": "Large" }
+            ]
+          }
+        },
+        "showMonthLabels": {
+          "displayName": "Show Month Labels",
+          "type": { "bool": true }
+        },
+        "weekStartsOn": {
+          "displayName": "Week Starts On",
+          "type": {
+            "enumeration": [
+              { "value": "sunday", "displayName": "Sunday" },
+              { "value": "monday", "displayName": "Monday" }
+            ]
+          }
+        },
+        "minColor": {
+          "displayName": "Min Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "maxColor": {
+          "displayName": "Max Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        }
+      }
+    },
+    "textSizes": {
+      "displayName": "Text Sizes",
+      "description": "Manual font size overrides (0 = auto/responsive)",
+      "properties": {
+        "yearLabelFontSize": {
+          "displayName": "Year Label Font Size",
+          "description": "0 = auto, 8-32 = manual size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "monthLabelFontSize": {
+          "displayName": "Month Label Font Size",
+          "description": "0 = auto, 8-32 = manual size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "dayLabelFontSize": {
+          "displayName": "Day Label Font Size",
+          "description": "0 = auto, 8-32 = manual size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "legendFontSize": {
+          "displayName": "Legend Font Size",
+          "description": "0 = auto, 8-32 = manual size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "panelTitleFontSize": {
+          "displayName": "Panel Title Font Size",
+          "description": "0 = auto, 8-32 = manual size",
+          "type": { "formatting": { "fontSize": true } }
+        }
+      }
+    },
+    "smallMultiples": {
+      "displayName": "Small Multiples",
+      "properties": {
+        "columns": {
+          "displayName": "Columns",
+          "type": { "numeric": true }
+        },
+        "spacing": {
+          "displayName": "Spacing",
+          "type": { "numeric": true }
+        },
+        "showTitle": {
+          "displayName": "Show Panel Titles",
+          "type": { "bool": true }
+        },
+        "titleFontSize": {
+          "displayName": "Title Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "titleSpacing": {
+          "displayName": "Title Spacing",
+          "description": "Gap between title and content",
+          "type": { "numeric": true }
+        }
+      }
+    }
+  },
+  "dataViewMappings": [
+    {
+      "conditions": [
+        {
+          "xAxis": { "max": 1 },
+          "values": { "max": 1 },
+          "groupBy": { "max": 1 }
+        }
+      ],
+      "categorical": {
+        "categories": {
+          "select": [
+            { "for": { "in": "xAxis" } },
+            { "for": { "in": "groupBy" } }
+          ],
+          "dataReductionAlgorithm": {
+            "top": { "count": 30000 }
+          }
+        },
+        "values": {
+          "select": [
+            { "for": { "in": "values" } }
+          ]
+        }
+      }
+    }
+  ],
+  "privileges": []
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <!-- Monochrome icon with transparent background (Power BI tints icons in the picker) -->
+  <path d="M3 12 C5 10, 7 14, 9 12 S13 10, 15 12 S17 14, 17 14 L17 16 L3 16 Z" fill="#118DFF" opacity="0.95"/>
+  <path d="M3 9 C5 7, 7 11, 9 9 S13 7, 15 9 S17 11, 17 11 L17 14 L3 14 Z" fill="#118DFF" opacity="0.75"/>
+  <path d="M3 6 C5 4, 7 8, 9 6 S13 4, 15 6 S17 8, 17 8 L17 11 L3 11 Z" fill="#118DFF" opacity="0.55"/>
+</svg>

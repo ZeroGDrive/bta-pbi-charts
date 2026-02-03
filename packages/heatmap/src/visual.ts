@@ -1,0 +1,160 @@
+"use strict";
+
+import powerbi from "powerbi-visuals-api";
+import * as d3 from "d3";
+import "./../style/visual.less";
+
+import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
+import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
+import IVisual = powerbi.extensibility.visual.IVisual;
+import IVisualHost = powerbi.extensibility.visual.IVisualHost;
+import ITooltipService = powerbi.extensibility.ITooltipService;
+
+import {
+    RenderContext,
+    createColorSchemeCard,
+    createGradientColorsCard,
+    createGeneralCard,
+    createHeatmapSettingsCard,
+    createLegendCard,
+    createSmallMultiplesCard,
+    createTextSizesCard,
+    createXAxisCard,
+    createYAxisCard,
+    renderEmptyState
+} from "@pbi-visuals/shared";
+import { IHeatmapVisualSettings, parseSettings } from "./settings";
+import { HeatmapTransformer } from "./HeatmapTransformer";
+import { HeatmapRenderer } from "./HeatmapRenderer";
+
+export class Visual implements IVisual {
+    private target: HTMLElement;
+    private svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+    private container: d3.Selection<SVGGElement, unknown, null, undefined>;
+    private host: IVisualHost;
+    private tooltipService: ITooltipService;
+    private settings: IHeatmapVisualSettings | null = null;
+    private renderer: HeatmapRenderer | null = null;
+
+    constructor(options: VisualConstructorOptions) {
+        this.host = options.host;
+        this.target = options.element;
+        this.tooltipService = this.host.tooltipService;
+
+        this.svg = d3.select(this.target)
+            .append("svg")
+            .classed("pbi-visual", true)
+            .classed("heatmap-visual", true);
+
+        this.container = this.svg.append("g")
+            .classed("chart-container", true);
+    }
+
+    public update(options: VisualUpdateOptions) {
+        // Clear previous content
+        this.svg.selectAll("*").remove();
+        this.container = this.svg.append("g").classed("chart-container", true);
+
+        const width = options.viewport.width;
+        const height = options.viewport.height;
+
+        this.svg.attr("width", width).attr("height", height);
+
+        // Validate data
+        if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].categorical) {
+            this.renderNoData(width, height);
+            return;
+        }
+
+        const dataView = options.dataViews[0];
+
+        // Parse settings
+        this.settings = parseSettings(dataView);
+
+        // Create render context
+        const context: RenderContext = {
+            svg: this.svg,
+            container: this.container,
+            tooltipService: this.tooltipService,
+            width,
+            height
+        };
+
+        // Create renderer
+        this.renderer = new HeatmapRenderer(context);
+
+        // Transform data
+        const chartData = HeatmapTransformer.transform(dataView.categorical);
+
+        // Check if data is empty
+        if (!chartData.dataPoints || chartData.dataPoints.length === 0) {
+            this.renderNoData(width, height);
+            return;
+        }
+
+        // Render the chart
+        this.renderer.render(chartData, this.settings);
+    }
+
+    private renderNoData(width: number, height: number): void {
+        renderEmptyState(this.container, width, height, {
+            title: "Set up Heatmap",
+            lines: [
+                "X-Axis: Column category (e.g., Month)",
+                "Y-Axis: Row category (e.g., Product)",
+                "Values: Measure (cell intensity)",
+                "Group By (optional): Small multiples panels"
+            ],
+            hint: "Tip: Turn on Value Labels if you want numbers inside cells."
+        });
+    }
+
+    public getFormattingModel(): powerbi.visuals.FormattingModel {
+        const cards: powerbi.visuals.FormattingCard[] = [];
+
+        if (!this.settings) {
+            return { cards };
+        }
+
+        cards.push(createGeneralCard({
+            responsiveText: this.settings.responsiveText,
+            fontScaleFactor: this.settings.fontScaleFactor
+        }));
+
+        cards.push(createColorSchemeCard(this.settings.colorScheme));
+
+        // Gradient colors live in heatmapSettings (minColor/maxColor)
+        cards.push(createGradientColorsCard(
+            this.settings.heatmap.minColor,
+            this.settings.heatmap.maxColor,
+            "heatmapSettings"
+        ));
+
+        cards.push(createLegendCard({
+            show: this.settings.showLegend,
+            position: this.settings.legendPosition,
+            fontSize: this.settings.legendFontSize,
+            maxItems: this.settings.maxLegendItems
+        }));
+
+        cards.push(createYAxisCard({
+            show: this.settings.showYAxis,
+            fontSize: this.settings.yAxisFontSize
+        }));
+
+        cards.push(createXAxisCard({
+            show: this.settings.showXAxis,
+            fontSize: this.settings.xAxisFontSize,
+            rotateLabels: this.settings.rotateXLabels
+        }));
+
+        cards.push(createTextSizesCard(this.settings.textSizes));
+
+        cards.push(createHeatmapSettingsCard(this.settings.heatmap));
+
+        cards.push(createSmallMultiplesCard(this.settings.smallMultiples));
+
+        return { cards };
+    }
+
+}

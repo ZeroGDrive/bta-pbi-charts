@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <!-- Monochrome icon with transparent background (Power BI tints icons in the picker) -->
+  <circle cx="8" cy="11" r="4.4" fill="#118DFF" opacity="0.9"/>
+  <circle cx="13.3" cy="8.3" r="3.3" fill="#118DFF" opacity="0.7"/>
+  <circle cx="13.8" cy="13.3" r="2.5" fill="#118DFF" opacity="0.55"/>
+</svg>

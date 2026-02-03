@@ -1,0 +1,77 @@
+.pbi-visual {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow: visible;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    .chart-container {
+        overflow: visible;
+    }
+
+    .streamgraph-panel {
+        overflow: visible;
+    }
+
+    .panel-title {
+        font-weight: 600;
+        fill: #1a1a2e;
+        letter-spacing: -0.02em;
+    }
+
+    // Streamgraph layers with smooth transitions
+    .stream-layer {
+        cursor: pointer;
+        transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:hover {
+            filter: brightness(0.92) saturate(1.15);
+        }
+    }
+
+    // Refined axis styles
+    .y-axis-label {
+        font-weight: 500;
+        letter-spacing: -0.01em;
+    }
+
+    .x-axis-label {
+        font-weight: 500;
+        letter-spacing: -0.01em;
+    }
+
+    .x-axis,
+    .y-axis {
+        line {
+            stroke: #e5e7eb;
+            stroke-width: 1;
+        }
+
+        text {
+            fill: #6b7280;
+            font-weight: 500;
+        }
+    }
+
+    // Professional legend styling
+    .color-legend {
+        rect {
+            stroke: #d1d5db;
+            stroke-width: 1;
+            rx: 4;
+            ry: 4;
+        }
+
+        text {
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+    }
+
+    // Empty state styling
+    .no-data-message {
+        fill: #9ca3af;
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+    }
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <!-- Monochrome icon with transparent background (Power BI tints icons in the picker) -->
+  <rect x="4" y="5" width="12" height="11" rx="1.6" fill="#118DFF" opacity="0.18" stroke="#118DFF" stroke-width="1.6"/>
+  <rect x="4" y="5" width="12" height="3" rx="1.6" fill="#118DFF" opacity="0.45"/>
+  <g transform="translate(5.2 9.2)">
+    <rect x="0" y="0" width="2.2" height="2.2" rx="0.5" fill="#118DFF" opacity="0.55"/>
+    <rect x="3.0" y="0" width="2.2" height="2.2" rx="0.5" fill="#118DFF" opacity="0.75"/>
+    <rect x="6.0" y="0" width="2.2" height="2.2" rx="0.5" fill="#118DFF" opacity="0.95"/>
+    <rect x="0" y="3.0" width="2.2" height="2.2" rx="0.5" fill="#118DFF" opacity="0.75"/>
+    <rect x="3.0" y="3.0" width="2.2" height="2.2" rx="0.5" fill="#118DFF" opacity="0.5"/>
+    <rect x="6.0" y="3.0" width="2.2" height="2.2" rx="0.5" fill="#118DFF" opacity="0.85"/>
+  </g>
+</svg>

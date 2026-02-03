@@ -1,0 +1,5 @@
+[install]
+# PowerBI visuals tooling (`pbiviz`/webpack) runs under Node and expects
+# a classic hoisted `node_modules` layout (many packages rely on it).
+linker = "hoisted"
+

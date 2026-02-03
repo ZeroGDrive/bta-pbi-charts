@@ -1,0 +1,25 @@
+{
+  "visual": {
+    "name": "calendarHeatmapVisual",
+    "displayName": "Calendar Heatmap",
+    "guid": "calendarHeatmapVisualD4E5F67890123456789012345678DEF",
+    "visualClassName": "Visual",
+    "version": "1.0.0.0",
+    "description": "A calendar heatmap visualization for Power BI showing data by date in a GitHub-style contribution graph format.",
+    "supportUrl": "https://github.com/example/bta-pbi-charts",
+    "gitHubUrl": ""
+  },
+  "apiVersion": "5.3.0",
+  "author": {
+    "name": "Custom Visual Developer",
+    "email": "developer@example.com"
+  },
+  "assets": {
+    "icon": "assets/icon.png"
+  },
+  "externalJS": null,
+  "style": "style/visual.less",
+  "capabilities": "capabilities.json",
+  "dependencies": null,
+  "stringResources": []
+}
