@@ -8,9 +8,10 @@ const repoRoot = path.resolve(__dirname, "..");
 
 const shimDir = path.join(repoRoot, "scripts", "shims");
 const localBin = path.join(process.cwd(), "node_modules", ".bin");
+const rootBin = path.join(repoRoot, "node_modules", ".bin");
 
 const existingPath = process.env.PATH ?? "";
-process.env.PATH = [shimDir, localBin, existingPath].filter(Boolean).join(path.delimiter);
+process.env.PATH = [shimDir, localBin, rootBin, existingPath].filter(Boolean).join(path.delimiter);
 
 const args = process.argv.slice(2);
 if (args.length === 0) {
