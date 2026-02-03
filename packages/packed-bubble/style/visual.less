@@ -1,8 +1,13 @@
 .pbi-visual {
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Segoe UI", "Inter", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow: visible;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+
+    svg text {
+        text-rendering: geometricPrecision;
+    }
 
     .chart-container {
         overflow: visible;
@@ -15,7 +20,7 @@
     .panel-title {
         font-weight: 600;
         fill: #1a1a2e;
-        letter-spacing: -0.02em;
+        letter-spacing: 0;
     }
 
     // Packed bubbles with polished styling
@@ -34,7 +39,7 @@
     .bubble-label {
         pointer-events: none;
         font-weight: 600;
-        letter-spacing: -0.02em;
+        letter-spacing: 0;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     }
 
@@ -48,8 +53,8 @@
         }
 
         text {
-            font-weight: 500;
-            letter-spacing: -0.01em;
+            font-weight: 400;
+            letter-spacing: 0;
         }
     }
 

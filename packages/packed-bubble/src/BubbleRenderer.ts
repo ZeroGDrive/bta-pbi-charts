@@ -66,7 +66,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
 
             const panelGroup = this.context.container.append("g")
                 .attr("class", "bubble-panel")
-                .attr("transform", `translate(${margin.left}, ${currentY})`);
+                .attr("transform", `translate(${Math.round(margin.left)}, ${Math.round(currentY)})`);
 
             // Group title with configurable spacing
             if (settings.smallMultiples.showTitle && groupName !== "All") {
@@ -80,7 +80,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
                 const title = panelGroup.append("text")
                     .attr("class", "panel-title")
                     .attr("x", 0)
-                    .attr("y", -titleSpacing)
+                    .attr("y", -Math.round(titleSpacing))
                     .attr("font-size", `${titleFontSize}px`)
                     .attr("font-weight", "600")
                     .attr("fill", "#333")
@@ -188,8 +188,8 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
                     .enter()
                     .append("text")
                     .attr("class", "bubble-label")
-                    .attr("x", d => d.x)
-                    .attr("y", d => d.y)
+                    .attr("x", d => Math.round(d.x))
+                    .attr("y", d => Math.round(d.y))
                     .attr("dy", "0.35em")
                     .attr("text-anchor", "middle")
                     .attr("font-size", d => getFontSize(d.radius) + "px")

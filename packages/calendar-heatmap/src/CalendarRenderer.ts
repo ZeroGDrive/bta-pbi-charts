@@ -79,7 +79,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
 
             const panelGroup = this.context.container.append("g")
                 .attr("class", "calendar-panel")
-                .attr("transform", `translate(${margin.left}, ${currentY})`);
+                .attr("transform", `translate(${Math.round(margin.left)}, ${Math.round(currentY)})`);
 
             // Group title with configurable spacing
             if (settings.smallMultiples.showTitle && groupName !== "All") {
@@ -93,7 +93,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                 const title = panelGroup.append("text")
                     .attr("class", "panel-title")
                     .attr("x", 0)
-                    .attr("y", -titleSpacing)
+                    .attr("y", -Math.round(titleSpacing))
                     .attr("font-size", `${titleFontSize}px`)
                     .attr("font-weight", "600")
                     .attr("fill", "#333")
@@ -116,13 +116,13 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
             years.forEach(year => {
                 const yearGroup = panelGroup.append("g")
                     .attr("class", "year-group")
-                    .attr("transform", `translate(0, ${yearOffsetY})`);
+                    .attr("transform", `translate(0, ${Math.round(yearOffsetY)})`);
 
                 // Year label - manual override or responsive font size
                 const yearFontSize = yearFontSizeForMargin;
                 yearGroup.append("text")
                     .attr("x", -(dayGutter + 6))
-                    .attr("y", 7 * (cellSize + cellPadding) / 2)
+                    .attr("y", Math.round(7 * (cellSize + cellPadding) / 2))
                     .attr("dy", "0.35em")
                     .attr("text-anchor", "end")
                     .attr("font-size", `${yearFontSize}px`)
@@ -137,7 +137,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                         if (i % 2 === 0) { // Show every other day label
                             yearGroup.append("text")
                                 .attr("x", 0)
-                                .attr("y", i * (cellSize + cellPadding) + cellSize / 2)
+                                .attr("y", Math.round(i * (cellSize) + (i * cellPadding) + cellSize / 2))
                                 .attr("dy", "0.35em")
                                 .attr("font-size", `${dayFontSize}px`)
                                 .attr("fill", "#999")
@@ -221,7 +221,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                     monthPositions.forEach((x, month) => {
                         if (x !== undefined) {
                             yearGroup.append("text")
-                                .attr("x", x)
+                                .attr("x", Math.round(x))
                                 .attr("y", -5)
                                 .attr("font-size", `${monthFontSize}px`)
                                 .attr("fill", "#666")

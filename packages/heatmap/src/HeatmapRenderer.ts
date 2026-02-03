@@ -83,7 +83,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
 
             const panelGroup = this.context.container.append("g")
                 .attr("class", "panel")
-                .attr("transform", `translate(${margin.left + offsetX}, ${currentY + offsetY})`);
+                .attr("transform", `translate(${Math.round(margin.left + offsetX)}, ${Math.round(currentY + offsetY)})`);
 
             // Group title with configurable spacing
             if (settings.smallMultiples.showTitle && groupName !== "All") {
@@ -97,7 +97,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                 const title = panelGroup.append("text")
                     .attr("class", "panel-title")
                     .attr("x", 0)
-                    .attr("y", -titleSpacing)
+                    .attr("y", -Math.round(titleSpacing))
                     .attr("font-size", `${titleFontSize}px`)
                     .attr("font-weight", "600")
                     .attr("fill", "#333")
@@ -183,8 +183,8 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
 
                         panelGroup.append("text")
                             .attr("class", "cell-value")
-                            .attr("x", x + xScale.bandwidth() / 2)
-                            .attr("y", y + yScale.bandwidth() / 2)
+                            .attr("x", Math.round(x + xScale.bandwidth() / 2))
+                            .attr("y", Math.round(y + yScale.bandwidth() / 2))
                             .attr("dy", "0.35em")
                             .attr("text-anchor", "middle")
                             .attr("font-size", `${cellFontSize}px`)
@@ -204,7 +204,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                     8, 18
                 );
                 groupYValues.forEach(yVal => {
-                    const y = (yScale(yVal) ?? 0) + yScale.bandwidth() / 2;
+                    const y = Math.round((yScale(yVal) ?? 0) + yScale.bandwidth() / 2);
                     const maxLabelWidth = Math.max(0, margin.left + offsetX - 18);
                     const displayLabel = formatLabel(yVal, maxLabelWidth, yAxisFontSize);
 
@@ -226,7 +226,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
 
             // X-axis labels (only on last group) with smart rotation
             if (settings.showXAxis && groupIndex === groups.length - 1) {
-                const xAxisY = groupYValues.length * (cellHeight + settings.heatmap.cellPadding) + 10;
+                const xAxisY = Math.round(groupYValues.length * (cellHeight + settings.heatmap.cellPadding) + 10);
                 const xAxisFontSize = this.getEffectiveFontSize(
                     settings.textSizes.xAxisFontSize,
                     settings.xAxisFontSize,
@@ -249,7 +249,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                         return;
                     }
 
-                    const x = (xScale(xVal) ?? 0) + xScale.bandwidth() / 2;
+                    const x = Math.round((xScale(xVal) ?? 0) + xScale.bandwidth() / 2);
                     const spacePerLabel = chartWidth / Math.max(1, Math.ceil(xValues.length / Math.max(1, skipInterval)));
                     const displayText = formatLabel(xVal, Math.max(0, spacePerLabel - 6), xAxisFontSize);
 

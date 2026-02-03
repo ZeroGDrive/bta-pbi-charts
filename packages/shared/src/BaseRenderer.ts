@@ -208,7 +208,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
 
             const legendGroup = this.context.container.append("g")
                 .attr("class", "color-legend")
-                .attr("transform", `translate(${x}, ${y})`);
+                .attr("transform", `translate(${Math.round(x)}, ${Math.round(y)})`);
 
             const effectiveItemsPerRow = Math.min(itemsPerRow, itemCount);
             const itemWidth = Math.min(itemWidthCap, availableWidth / effectiveItemsPerRow);
@@ -226,7 +226,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
 
                 const itemGroup = legendGroup.append("g")
                     .attr("class", "color-legend-item")
-                    .attr("transform", `translate(${itemX}, ${itemY})`);
+                    .attr("transform", `translate(${Math.round(itemX)}, ${Math.round(itemY)})`);
 
                 itemGroup.append("rect")
                     .attr("x", 0)
@@ -240,7 +240,6 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                     .attr("x", 20)
                     .attr("y", Math.round(rowHeight / 2 + legendFontSize / 2 - 2))
                     .attr("font-size", `${legendFontSize}px`)
-                    .attr("font-weight", "500")
                     .attr("fill", "#555")
                     .text(displayText);
 
@@ -251,7 +250,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         } else {
             const legendGroup = this.context.container.append("g")
                 .attr("class", "color-legend")
-                .attr("transform", `translate(${x}, ${y})`);
+                .attr("transform", `translate(${Math.round(x)}, ${Math.round(y)})`);
 
             // Gradient legend
             const gradientId = `legend-gradient-${++BaseRenderer.gradientCounter}`;
@@ -284,7 +283,6 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                 .attr("x", 0)
                 .attr("y", labelY)
                 .attr("font-size", `${legendFontSize}px`)
-                .attr("font-weight", "500")
                 .attr("fill", "#777")
                 .text(minLabel);
 
@@ -293,7 +291,6 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                 .attr("y", labelY)
                 .attr("text-anchor", "end")
                 .attr("font-size", `${legendFontSize}px`)
-                .attr("font-weight", "500")
                 .attr("fill", "#777")
                 .text(maxLabel);
         }

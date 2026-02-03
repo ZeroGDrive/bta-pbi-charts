@@ -169,7 +169,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                 const title = panelGroup.append("text")
                     .attr("class", "panel-title")
                     .attr("x", 0)
-                    .attr("y", -titleSpacing)
+                    .attr("y", -Math.round(titleSpacing))
                     .attr("font-size", `${titleFontSize}px`)
                     .attr("font-weight", "600")
                     .attr("fill", "#333")
@@ -298,11 +298,10 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                     const label = panelGroup.append("text")
                         .attr("class", "y-axis-label")
                         .attr("x", -8)
-                        .attr("y", yScale(firstPoint.rank))
+                        .attr("y", Math.round(yScale(firstPoint.rank)))
                         .attr("dy", "0.35em")
                         .attr("text-anchor", "end")
                         .attr("font-size", `${yAxisFontSize}px`)
-                        .attr("font-weight", "500")
                         .attr("fill", color)
                         .text(displayLabel);
 
@@ -328,7 +327,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                         return;
                     }
 
-                    const x = xScale(xVal) ?? 0;
+                    const x = Math.round(xScale(xVal) ?? 0);
                     const text = xAxisGroup.append("text")
                         .attr("x", x)
                         .attr("y", shouldRotate ? 5 : 12)
@@ -398,14 +397,14 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
     ): void {
         const legendGroup = this.context.container.append("g")
             .attr("class", "bump-legend")
-            .attr("transform", `translate(${x}, ${y})`);
+            .attr("transform", `translate(${Math.round(x)}, ${Math.round(y)})`);
 
         const fontSize = this.getResponsiveFontSize(this.settings.legendFontSize || 11, 9, 16);
 
         layout.items.forEach(item => {
             const itemGroup = legendGroup.append("g")
                 .attr("class", "bump-legend-item")
-                .attr("transform", `translate(${item.x}, ${item.y})`);
+                .attr("transform", `translate(${Math.round(item.x)}, ${Math.round(item.y)})`);
 
             itemGroup.append("rect")
                 .attr("x", 0)
@@ -419,7 +418,6 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                 .attr("x", 16)
                 .attr("y", 10)
                 .attr("font-size", `${fontSize}px`)
-                .attr("font-weight", "500")
                 .attr("fill", "#555")
                 .text(item.displayText);
 

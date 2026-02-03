@@ -59,7 +59,7 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                 const title = panelGroup.append("text")
                     .attr("class", "panel-title")
                     .attr("x", 0)
-                    .attr("y", -titleSpacing)
+                    .attr("y", -Math.round(titleSpacing))
                     .attr("font-size", `${titleFontSize}px`)
                     .attr("font-weight", "600")
                     .attr("fill", "#333")
@@ -153,7 +153,7 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
             if (settings.showXAxis && groupIndex === groups.length - 1) {
                 const xAxisGroup = panelGroup.append("g")
                     .attr("class", "x-axis")
-                    .attr("transform", `translate(0, ${groupHeight})`);
+                    .attr("transform", `translate(0, ${Math.round(groupHeight)})`);
 
                 const xAxisFontSize = this.getEffectiveFontSize(
                     settings.textSizes.xAxisFontSize,
@@ -186,7 +186,7 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                         return;
                     }
 
-                    const x = xScale(i);
+                    const x = Math.round(xScale(i));
                     const visibleCount = Math.ceil(xValues.length / Math.max(1, skipInterval));
                     const spacePerLabel = chartWidth / Math.max(1, visibleCount);
                     const displayText = formatLabel(xDisplayLabels[i], Math.max(0, spacePerLabel - 6), xAxisFontSize);

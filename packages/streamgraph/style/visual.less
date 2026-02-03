@@ -1,8 +1,13 @@
 .pbi-visual {
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Segoe UI", "Inter", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow: visible;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+
+    svg text {
+        text-rendering: geometricPrecision;
+    }
 
     .chart-container {
         overflow: visible;
@@ -15,7 +20,7 @@
     .panel-title {
         font-weight: 600;
         fill: #1a1a2e;
-        letter-spacing: -0.02em;
+        letter-spacing: 0;
     }
 
     // Streamgraph layers with smooth transitions
@@ -30,13 +35,13 @@
 
     // Refined axis styles
     .y-axis-label {
-        font-weight: 500;
-        letter-spacing: -0.01em;
+        font-weight: 400;
+        letter-spacing: 0;
     }
 
     .x-axis-label {
-        font-weight: 500;
-        letter-spacing: -0.01em;
+        font-weight: 400;
+        letter-spacing: 0;
     }
 
     .x-axis,
@@ -48,7 +53,8 @@
 
         text {
             fill: #6b7280;
-            font-weight: 500;
+            font-weight: 400;
+            letter-spacing: 0;
         }
     }
 
@@ -62,8 +68,8 @@
         }
 
         text {
-            font-weight: 500;
-            letter-spacing: -0.01em;
+            font-weight: 400;
+            letter-spacing: 0;
         }
     }
 

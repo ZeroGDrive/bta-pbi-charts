@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "build:shared": "bun run --filter @pbi-visuals/shared build",
-    "collect:dist": "node scripts/collect-dist.mjs",
+    "collect:dist": "bun run scripts/collect-dist.mjs",
     "build:all": "bun run build:shared && bun run --workspaces --if-present package && bun run collect:dist",
     "package:heatmap": "bun run --filter @pbi-visuals/heatmap package",
     "package:streamgraph": "bun run --filter @pbi-visuals/streamgraph package",
