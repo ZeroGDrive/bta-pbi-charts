@@ -66,8 +66,41 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
             availableWidth: availableWidthForLabels,
             fontSize: xAxisFontSize
         });
-        const needsRotation = rotationResult.shouldRotate;
+        let needsRotation = rotationResult.shouldRotate;
         const labelSkipInterval = rotationResult.skipInterval;
+
+        // If auto-rotation decided to rotate, but we are already skipping labels,
+        // re-check whether the remaining visible labels can fit without rotation.
+        if (settings.rotateXLabels === "auto" && needsRotation && labelSkipInterval > 1 && xValues.length > 1) {
+            const fontFamily = "Segoe UI, sans-serif";
+            const padding = 4;
+            const visibleIndices: number[] = [];
+
+            for (let i = 0; i < xValues.length; i += labelSkipInterval) {
+                visibleIndices.push(i);
+            }
+            if (visibleIndices[visibleIndices.length - 1] !== xValues.length - 1) {
+                visibleIndices.push(xValues.length - 1);
+            }
+
+            const visibleLabels = visibleIndices.map(i => xDisplayLabels[i]);
+            const maxVisibleWidth = measureMaxLabelWidth(visibleLabels, xAxisFontSize, fontFamily);
+
+            // Matches the scalePoint padding used for the X scale in this chart.
+            const scalePointPadding = 0.5;
+            const denom = Math.max(1, (xValues.length - 1) + (scalePointPadding * 2));
+            const step = availableWidthForLabels / denom;
+
+            let minDelta = Number.POSITIVE_INFINITY;
+            for (let j = 1; j < visibleIndices.length; j++) {
+                minDelta = Math.min(minDelta, visibleIndices[j] - visibleIndices[j - 1]);
+            }
+            const minSpacing = Number.isFinite(minDelta) ? (minDelta * step) : availableWidthForLabels;
+
+            if ((maxVisibleWidth + padding) <= minSpacing) {
+                needsRotation = false;
+            }
+        }
 
         // Legend position affects margins (dynamic height with wrapping)
         const legendAtTop = settings.legendPosition === "top";
