@@ -8,6 +8,7 @@ import { IBaseVisualSettings, colorSchemes } from "./settings";
 import { formatLabel } from "./textUtils";
 import { renderEmptyState } from "./emptyState";
 import { HtmlTooltip, TooltipMeta, toTooltipRows } from "./tooltip";
+import { CanvasLayer } from "./canvas";
 
 export interface RenderContext {
     svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
@@ -16,6 +17,8 @@ export interface RenderContext {
     root: HTMLElement;
     width: number;
     height: number;
+    canvas?: CanvasLayer | null;
+    htmlTooltip?: HtmlTooltip | null;
 }
 
 export interface ChartData {
@@ -41,13 +44,74 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
     protected context: RenderContext;
     protected settings!: TSettings;
     private static gradientCounter: number = 0;
-    private htmlTooltip: HtmlTooltip | null = null;
 
     constructor(context: RenderContext) {
         this.context = context;
     }
 
     public abstract render(data: ChartData, settings: TSettings): void;
+
+    private clearCanvasTooltipHandlers(canvas: HTMLCanvasElement): void {
+        canvas.onmousemove = null;
+        canvas.onmouseleave = null;
+        canvas.onpointermove = null;
+        canvas.onpointerleave = null;
+        canvas.onpointerdown = null;
+        canvas.onpointerup = null;
+        canvas.ontouchstart = null;
+        canvas.ontouchmove = null;
+        canvas.ontouchend = null;
+        canvas.ontouchcancel = null;
+    }
+
+    private static colorParseCanvas: HTMLCanvasElement | null = null;
+    private static colorParseCtx: CanvasRenderingContext2D | null = null;
+
+    private static getColorParseCtx(): CanvasRenderingContext2D | null {
+        if (BaseRenderer.colorParseCtx) return BaseRenderer.colorParseCtx;
+        if (typeof document === "undefined") return null;
+        BaseRenderer.colorParseCanvas = BaseRenderer.colorParseCanvas || document.createElement("canvas");
+        BaseRenderer.colorParseCtx = BaseRenderer.colorParseCanvas.getContext("2d");
+        return BaseRenderer.colorParseCtx;
+    }
+
+    private static parseCssColorToRgb(color: string): { r: number; g: number; b: number } | null {
+        const ctx = BaseRenderer.getColorParseCtx();
+        if (!ctx) return null;
+
+        // Browser-normalize any CSS color.
+        try {
+            ctx.fillStyle = "#000000";
+            ctx.fillStyle = color;
+        } catch {
+            return null;
+        }
+
+        const normalized = String(ctx.fillStyle || "").trim().toLowerCase();
+        if (!normalized) return null;
+
+        // Most browsers return rgb(...) for non-hex inputs, and #rrggbb for hex-like inputs.
+        if (normalized.startsWith("#")) {
+            let hex = normalized.slice(1);
+            if (hex.length === 3) {
+                hex = hex.split("").map(c => c + c).join("");
+            }
+            if (hex.length !== 6) return null;
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            if ([r, g, b].some(v => Number.isNaN(v))) return null;
+            return { r, g, b };
+        }
+
+        const m = normalized.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+)\s*)?\)$/);
+        if (!m) return null;
+        const r = Math.max(0, Math.min(255, Math.round(Number(m[1]))));
+        const g = Math.max(0, Math.min(255, Math.round(Number(m[2]))));
+        const b = Math.max(0, Math.min(255, Math.round(Number(m[3]))));
+        if ([r, g, b].some(v => Number.isNaN(v))) return null;
+        return { r, g, b };
+    }
 
     protected getColorScale(minValue: number, maxValue: number): d3.ScaleSequential<string, never> {
         const scheme = colorSchemes[this.settings.colorScheme];
@@ -129,14 +193,14 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
             return;
         }
 
-        if (this.settings.tooltip.style === "custom" && typeof document !== "undefined") {
-            if (!this.htmlTooltip) {
-                this.htmlTooltip = new HtmlTooltip(this.context.root, this.settings.tooltip);
-            } else {
-                this.htmlTooltip.updateSettings(this.settings.tooltip);
-            }
+        // Ensure SVG elements can receive mouse events even if the root SVG disables pointer events.
+        element.style("pointer-events", "all");
 
-            const tooltip = this.htmlTooltip;
+        if (this.settings.tooltip.style === "custom" && typeof document !== "undefined") {
+            const tooltip = this.context.htmlTooltip;
+            if (!tooltip) {
+                return;
+            }
 
             element
                 .on("mouseover", function (event: MouseEvent) {
@@ -191,13 +255,13 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
             return;
         }
 
-        if (!this.htmlTooltip) {
-            this.htmlTooltip = new HtmlTooltip(this.context.root, this.settings.tooltip);
-        } else {
-            this.htmlTooltip.updateSettings(this.settings.tooltip);
-        }
+        // Ensure SVG elements can receive mouse events even if the root SVG disables pointer events.
+        element.style("pointer-events", "all");
 
-        const tooltip = this.htmlTooltip;
+        const tooltip = this.context.htmlTooltip;
+        if (!tooltip) {
+            return;
+        }
 
         element
             .on("mouseover", function (event: MouseEvent) {
@@ -211,6 +275,97 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
             .on("mouseout", function () {
                 tooltip.hide();
             });
+    }
+
+    protected addCanvasTooltip(
+        getDataAt?: ((x: number, y: number) => { tooltipData: VisualTooltipDataItem[]; meta?: TooltipMeta } | null) | null
+    ): void {
+        const layer = this.context.canvas;
+        if (!layer) return;
+
+        const canvas = layer.canvas;
+        const tooltipService = this.context.tooltipService;
+        const useCustom = !!(this.settings.tooltip?.style === "custom" && typeof document !== "undefined");
+        const htmlTooltip = this.context.htmlTooltip ?? null;
+
+        const hide = () => {
+            canvas.style.cursor = "default";
+            if (useCustom && htmlTooltip) {
+                htmlTooltip.hide();
+            } else {
+                tooltipService.hide({ immediately: true, isTouchEvent: false });
+            }
+        };
+
+        // If tooltips are disabled (or no hit-test is registered), clear handlers so stale closures don't linger.
+        if (!this.settings.tooltip?.enabled || !getDataAt) {
+            this.clearCanvasTooltipHandlers(canvas);
+            hide();
+            return;
+        }
+
+        if (useCustom && !htmlTooltip) {
+            // Custom tooltip style requested but no HtmlTooltip instance provided by the visual.
+            // Clear handlers to avoid stale interactions.
+            this.clearCanvasTooltipHandlers(canvas);
+            hide();
+            return;
+        }
+
+        const handleMove = (clientX: number, clientY: number, isTouch: boolean) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            const hit = getDataAt(x, y);
+            if (!hit) {
+                hide();
+                return;
+            }
+
+            canvas.style.cursor = "pointer";
+
+            if (useCustom && htmlTooltip) {
+                htmlTooltip.show({ meta: hit.meta, rows: toTooltipRows(hit.tooltipData) }, clientX, clientY);
+                return;
+            }
+
+            tooltipService.show({
+                dataItems: hit.tooltipData,
+                identities: [],
+                coordinates: [clientX, clientY],
+                isTouchEvent: isTouch
+            });
+        };
+
+        canvas.onmousemove = (event: MouseEvent) => {
+            handleMove(event.clientX, event.clientY, false);
+        };
+
+        canvas.onpointermove = (event: PointerEvent) => {
+            handleMove(event.clientX, event.clientY, event.pointerType === "touch");
+        };
+
+        canvas.onpointerdown = (event: PointerEvent) => {
+            handleMove(event.clientX, event.clientY, event.pointerType === "touch");
+        };
+        canvas.onpointerup = () => hide();
+
+        canvas.ontouchstart = (event: TouchEvent) => {
+            const touch = event.touches[0];
+            if (!touch) return;
+            handleMove(touch.clientX, touch.clientY, true);
+        };
+        canvas.ontouchmove = (event: TouchEvent) => {
+            const touch = event.touches[0];
+            if (!touch) return;
+            handleMove(touch.clientX, touch.clientY, true);
+        };
+        canvas.ontouchend = () => hide();
+        canvas.ontouchcancel = () => hide();
+
+        canvas.onmouseleave = () => hide();
+        canvas.onpointerleave = () => hide();
     }
 
     protected renderLegend(
@@ -361,13 +516,14 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         }
     }
 
-    protected getContrastColor(hexColor: string): string {
-        const hex = hexColor.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        return luminance > 0.5 ? '#333333' : '#ffffff';
+    protected getContrastColor(color: string): string {
+        const rgb = BaseRenderer.parseCssColorToRgb(color);
+        if (!rgb) {
+            // Safe default: dark text.
+            return "#333333";
+        }
+        const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+        return luminance > 0.5 ? "#333333" : "#ffffff";
     }
 
     // Responsive text sizing helpers

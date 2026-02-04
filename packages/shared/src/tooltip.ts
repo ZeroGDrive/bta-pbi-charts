@@ -33,16 +33,26 @@ export class HtmlTooltip {
     private settings: ITooltipSettings;
     private visible: boolean = false;
 
-    constructor(root: HTMLElement, settings: ITooltipSettings) {
+    constructor(root: HTMLElement, settings: ITooltipSettings, ownerId?: string) {
         this.root = root;
         this.settings = settings;
 
-        if (!this.root.style.position) {
+        const pos = (typeof window !== "undefined" && window.getComputedStyle)
+            ? window.getComputedStyle(this.root).position
+            : this.root.style.position;
+        if (!pos || pos === "static") {
             this.root.style.position = "relative";
         }
 
-        this.el = document.createElement("div");
+        const existing = ownerId
+            ? (this.root.querySelector(`div[data-bta-tooltip="true"][data-bta-tooltip-owner="${ownerId}"]`) as HTMLDivElement | null)
+            : null;
+
+        this.el = existing ?? document.createElement("div");
         this.el.setAttribute("data-bta-tooltip", "true");
+        if (ownerId) {
+            this.el.setAttribute("data-bta-tooltip-owner", ownerId);
+        }
         this.el.style.position = "absolute";
         this.el.style.left = "0px";
         this.el.style.top = "0px";
@@ -56,7 +66,9 @@ export class HtmlTooltip {
         this.el.style.lineHeight = "1.2";
 
         this.applyTheme();
-        this.root.appendChild(this.el);
+        if (!existing) {
+            this.root.appendChild(this.el);
+        }
     }
 
     public updateSettings(settings: ITooltipSettings): void {
@@ -223,4 +235,3 @@ export class HtmlTooltip {
         }
     }
 }
-

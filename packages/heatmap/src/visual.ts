@@ -22,30 +22,46 @@ import {
     createTooltipCard,
     createXAxisCard,
     createYAxisCard,
-    renderEmptyState
+    renderEmptyState,
+    ensureHiDPICanvas,
+    CanvasLayer,
+    HtmlTooltip
 } from "@pbi-visuals/shared";
 import { IHeatmapVisualSettings, parseSettings } from "./settings";
 import { HeatmapTransformer } from "./HeatmapTransformer";
 import { HeatmapRenderer } from "./HeatmapRenderer";
 
 export class Visual implements IVisual {
+    private static instanceCounter: number = 0;
     private target: HTMLElement;
     private svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
     private container: d3.Selection<SVGGElement, unknown, null, undefined>;
+    private canvasLayer: CanvasLayer | null = null;
     private host: IVisualHost;
     private tooltipService: ITooltipService;
     private settings: IHeatmapVisualSettings | null = null;
     private renderer: HeatmapRenderer | null = null;
+    private htmlTooltip: HtmlTooltip | null = null;
+    private tooltipOwnerId: string;
 
     constructor(options: VisualConstructorOptions) {
         this.host = options.host;
         this.target = options.element;
         this.tooltipService = this.host.tooltipService;
+        this.tooltipOwnerId = `bta-heatmap-${Visual.instanceCounter++}`;
+
+        this.canvasLayer = ensureHiDPICanvas(this.target, "bta-heatmap-canvas");
 
         this.svg = d3.select(this.target)
             .append("svg")
             .classed("pbi-visual", true)
             .classed("heatmap-visual", true);
+
+        this.svg
+            .style("position", "absolute")
+            .style("inset", "0")
+            .style("z-index", "1")
+            .style("pointer-events", "none");
 
         this.container = this.svg.append("g")
             .classed("chart-container", true);
@@ -55,10 +71,18 @@ export class Visual implements IVisual {
         // Clear previous content
         this.svg.selectAll("*").remove();
         this.container = this.svg.append("g").classed("chart-container", true);
-        this.target.querySelectorAll('[data-bta-tooltip="true"]').forEach(el => el.remove());
+        this.htmlTooltip?.hide();
 
         const width = options.viewport.width;
         const height = options.viewport.height;
+
+        this.canvasLayer?.resize(width, height);
+        this.canvasLayer?.clear();
+        if (this.canvasLayer?.canvas) {
+            this.canvasLayer.canvas.onmousemove = null;
+            this.canvasLayer.canvas.onmouseleave = null;
+            this.canvasLayer.canvas.style.cursor = "default";
+        }
 
         this.svg.attr("width", width).attr("height", height);
 
@@ -72,6 +96,7 @@ export class Visual implements IVisual {
 
         // Parse settings
         this.settings = parseSettings(dataView);
+        this.syncHtmlTooltip();
 
         // Create render context
         const context: RenderContext = {
@@ -80,7 +105,9 @@ export class Visual implements IVisual {
             tooltipService: this.tooltipService,
             root: this.target,
             width,
-            height
+            height,
+            canvas: this.canvasLayer,
+            htmlTooltip: this.htmlTooltip
         };
 
         // Create renderer
@@ -110,6 +137,25 @@ export class Visual implements IVisual {
             ],
             hint: "Tip: Turn on Value Labels if you want numbers inside cells."
         });
+    }
+
+    private syncHtmlTooltip(): void {
+        const tooltip = this.settings?.tooltip;
+        const shouldUseCustom = !!(tooltip?.enabled && tooltip.style === "custom" && typeof document !== "undefined");
+
+        if (!shouldUseCustom) {
+            if (this.htmlTooltip) {
+                this.htmlTooltip.destroy();
+                this.htmlTooltip = null;
+            }
+            return;
+        }
+
+        if (!this.htmlTooltip) {
+            this.htmlTooltip = new HtmlTooltip(this.target, tooltip!, this.tooltipOwnerId);
+        } else {
+            this.htmlTooltip.updateSettings(tooltip!);
+        }
     }
 
     public getFormattingModel(): powerbi.visuals.FormattingModel {
@@ -160,6 +206,33 @@ export class Visual implements IVisual {
         cards.push(createSmallMultiplesCard(this.settings.smallMultiples));
 
         return { cards };
+    }
+
+    public destroy(): void {
+        try {
+            this.htmlTooltip?.destroy();
+            this.htmlTooltip = null;
+            this.target.querySelectorAll('[data-bta-tooltip="true"]').forEach(el => el.remove());
+        } catch {
+            // ignore
+        }
+        try {
+            this.svg?.remove();
+        } catch {
+            // ignore
+        }
+        if (this.canvasLayer?.canvas) {
+            this.canvasLayer.canvas.onmousemove = null;
+            this.canvasLayer.canvas.onmouseleave = null;
+            try {
+                this.canvasLayer.canvas.remove();
+            } catch {
+                // ignore
+            }
+        }
+        this.renderer = null;
+        this.settings = null;
+        this.canvasLayer = null;
     }
 
 }

@@ -21,6 +21,28 @@ export interface LabelRotationResult {
 
 // Cache for text measurements to avoid repeated DOM operations
 const textWidthCache = new Map<string, number>();
+const MAX_TEXT_WIDTH_CACHE_ENTRIES = 5000;
+
+let measureCanvas: HTMLCanvasElement | null = null;
+let measureCtx: CanvasRenderingContext2D | null = null;
+
+function getMeasureContext(): CanvasRenderingContext2D | null {
+    if (measureCtx) return measureCtx;
+    if (typeof document === "undefined") return null;
+    measureCanvas = measureCanvas || document.createElement("canvas");
+    measureCtx = measureCanvas.getContext("2d");
+    return measureCtx;
+}
+
+function cacheSet(key: string, value: number): void {
+    textWidthCache.set(key, value);
+    // Naive LRU eviction: Map preserves insertion order; evict oldest.
+    while (textWidthCache.size > MAX_TEXT_WIDTH_CACHE_ENTRIES) {
+        const oldestKey = textWidthCache.keys().next().value as string | undefined;
+        if (!oldestKey) break;
+        textWidthCache.delete(oldestKey);
+    }
+}
 
 /**
  * Measure text width using canvas context (faster than SVG)
@@ -34,28 +56,29 @@ export function measureTextWidth(text: string, fontSize: number, fontFamily: str
 
     const cacheKey = `${text}|${fontSize}|${fontFamily}`;
 
-    if (textWidthCache.has(cacheKey)) {
-        return textWidthCache.get(cacheKey)!;
+    const cached = textWidthCache.get(cacheKey);
+    if (cached !== undefined) {
+        // Refresh LRU position.
+        textWidthCache.delete(cacheKey);
+        textWidthCache.set(cacheKey, cached);
+        return cached;
     }
 
     let width: number;
 
     // Try canvas-based measurement (most accurate and fastest)
-    if (typeof document !== "undefined") {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-            ctx.font = `${fontSize}px ${fontFamily}`;
-            width = ctx.measureText(text).width;
-            textWidthCache.set(cacheKey, width);
-            return width;
-        }
+    const ctx = getMeasureContext();
+    if (ctx) {
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        width = ctx.measureText(text).width;
+        cacheSet(cacheKey, width);
+        return width;
     }
 
     // Fallback: estimate based on character count and font size
     // Average character width is approximately 0.6 * fontSize for sans-serif
     width = text.length * fontSize * 0.6;
-    textWidthCache.set(cacheKey, width);
+    cacheSet(cacheKey, width);
     return width;
 }
 
