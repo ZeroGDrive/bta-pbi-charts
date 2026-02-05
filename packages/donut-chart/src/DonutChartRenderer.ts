@@ -47,14 +47,26 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
             ? this.getLegendReservation({ isOrdinal: true, categories })
             : { top: 0, right: 0, bottom: 0, left: 0 };
 
+        const titleSpacing = settings.smallMultiples.titleSpacing || 25;
+        const panelTitleFontSize = this.getEffectiveFontSize(
+            settings.textSizes.panelTitleFontSize > 0 ? settings.textSizes.panelTitleFontSize : settings.smallMultiples.titleFontSize,
+            6,
+            40
+        );
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
+        const interPanelGap = groups.length > 1
+            ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
+            : 0;
+
         const margin = {
-            top: 12 + legendReserve.top,
+            top: 12 + legendReserve.top + titleReserve,
             right: 12 + legendReserve.right,
             bottom: 12 + legendReserve.bottom,
             left: 12 + legendReserve.left
         };
 
-        const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
+        const totalSpacing = (groupCount - 1) * interPanelGap;
         const availableHeight = this.context.height - margin.top - margin.bottom - totalSpacing;
         const chartWidth = this.context.width - margin.left - margin.right;
 
@@ -130,7 +142,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
                         .attr("fill", "#9ca3af")
                         .text("No data");
 
-                currentY += groupHeight + settings.smallMultiples.spacing;
+                currentY += groupHeight + interPanelGap;
                 return;
             }
 
@@ -527,7 +539,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
                 }
             }
 
-            currentY += groupHeight + settings.smallMultiples.spacing;
+            currentY += groupHeight + interPanelGap;
         });
 
         // Legend (categorical)

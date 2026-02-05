@@ -7,6 +7,12 @@
       "description": "Slice categories (like native Power BI Donut/Pie)"
     },
     {
+      "displayName": "Group",
+      "name": "group",
+      "kind": "Grouping",
+      "description": "Splits the donut into small multiples (one donut per group)"
+    },
+    {
       "displayName": "Values",
       "name": "values",
       "kind": "Measure",
@@ -272,6 +278,27 @@
           "type": { "numeric": true }
         }
       }
+    },
+    "smallMultiples": {
+      "displayName": "Small Multiples",
+      "properties": {
+        "spacing": {
+          "displayName": "Panel Spacing",
+          "type": { "numeric": true }
+        },
+        "showTitle": {
+          "displayName": "Show Panel Titles",
+          "type": { "bool": true }
+        },
+        "titleFontSize": {
+          "displayName": "Title Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "titleSpacing": {
+          "displayName": "Title Spacing",
+          "type": { "numeric": true }
+        }
+      }
     }
   },
   "dataViewMappings": [
@@ -279,6 +306,7 @@
       "conditions": [
         {
           "legend": { "max": 1 },
+          "group": { "max": 0 },
           "values": { "max": 1 }
         }
       ],
@@ -292,6 +320,30 @@
           "select": [
             { "for": { "in": "values" } }
           ]
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "legend": { "max": 1 },
+          "group": { "min": 1, "max": 1 },
+          "values": { "max": 1 }
+        }
+      ],
+      "categorical": {
+        "categories": {
+          "select": [
+            { "for": { "in": "legend" } }
+          ]
+        },
+        "values": {
+          "group": {
+            "by": "group",
+            "select": [
+              { "for": { "in": "values" } }
+            ]
+          }
         }
       }
     }

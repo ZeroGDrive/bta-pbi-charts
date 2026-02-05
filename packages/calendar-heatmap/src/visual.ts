@@ -15,6 +15,7 @@ import {
     createCalendarSettingsCard,
     createColorSchemeCard,
     createGradientColorsCard,
+    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     createYAxisCard,
@@ -117,7 +118,8 @@ export class Visual implements IVisual {
             title: "Set up Calendar Heatmap",
             lines: [
                 "Date: Daily date field",
-                "Values: Measure (cell intensity)"
+                "Values: Measure (cell intensity)",
+                "Group (optional): Split into panels"
             ],
             hint: "Tip: Use a Date column (not Month name) for proper daily placement."
         });
@@ -158,7 +160,12 @@ export class Visual implements IVisual {
         // Day labels live in yAxisSettings
         cards.push(createYAxisCard({
             show: this.settings.showYAxis,
-            fontSize: this.settings.yAxisFontSize
+            fontSize: this.settings.yAxisFontSize,
+            fontFamily: this.settings.yAxisFontFamily,
+            bold: this.settings.yAxisBold,
+            italic: this.settings.yAxisItalic,
+            underline: this.settings.yAxisUnderline,
+            color: this.settings.yAxisColor
         }));
 
         cards.push(createTextSizesCard({
@@ -166,6 +173,12 @@ export class Visual implements IVisual {
             monthLabelFontSize: this.settings.textSizes.monthLabelFontSize || 9,
             dayLabelFontSize: this.settings.textSizes.dayLabelFontSize || this.settings.yAxisFontSize,
             panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize
+        }));
+
+        cards.push(createSmallMultiplesCard({
+            spacing: this.settings.smallMultiples.spacing,
+            showTitle: this.settings.smallMultiples.showTitle,
+            titleSpacing: this.settings.smallMultiples.titleSpacing
         }));
 
         cards.push(createCalendarSettingsCard(this.settings.calendar));

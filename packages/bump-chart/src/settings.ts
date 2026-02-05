@@ -10,7 +10,6 @@ import {
     defaultSmallMultiplesSettings,
     defaultLegendSettings,
     defaultCustomColorSettings,
-    defaultTextSizeSettings,
     defaultTooltipSettings,
     TooltipStyle,
     TooltipTheme
@@ -42,8 +41,18 @@ export const defaultSettings: IBumpChartVisualSettings = {
     maxLegendItems: defaultLegendSettings.maxLegendItems!,
     showXAxis: true,
     xAxisFontSize: 10,
+    xAxisFontFamily: "Segoe UI",
+    xAxisBold: false,
+    xAxisItalic: false,
+    xAxisUnderline: false,
+    xAxisColor: "#666666",
     showYAxis: true,
     yAxisFontSize: 11,
+    yAxisFontFamily: "Segoe UI",
+    yAxisBold: false,
+    yAxisItalic: false,
+    yAxisUnderline: false,
+    yAxisColor: "#333333",
     rotateXLabels: "auto",
     tooltip: { ...defaultTooltipSettings },
     useCustomColors: defaultCustomColorSettings.useCustomColors,
@@ -132,6 +141,12 @@ export function parseSettings(dataView: DataView): IBumpChartVisualSettings {
         settings.showXAxis = (xAxisObj["show"] as boolean) ?? defaultSettings.showXAxis;
         settings.xAxisFontSize = (xAxisObj["fontSize"] as number) ?? defaultSettings.xAxisFontSize;
         settings.rotateXLabels = (xAxisObj["rotateLabels"] as RotateLabelsMode) ?? defaultSettings.rotateXLabels;
+        settings.xAxisFontFamily = (xAxisObj["fontFamily"] as string) ?? defaultSettings.xAxisFontFamily;
+        settings.xAxisBold = (xAxisObj["bold"] as boolean) ?? defaultSettings.xAxisBold;
+        settings.xAxisItalic = (xAxisObj["italic"] as boolean) ?? defaultSettings.xAxisItalic;
+        settings.xAxisUnderline = (xAxisObj["underline"] as boolean) ?? defaultSettings.xAxisUnderline;
+        const xColor = xAxisObj["color"] as any;
+        if (xColor?.solid?.color) settings.xAxisColor = xColor.solid.color;
     }
 
     // Y-Axis settings
@@ -139,6 +154,12 @@ export function parseSettings(dataView: DataView): IBumpChartVisualSettings {
     if (yAxisObj) {
         settings.showYAxis = (yAxisObj["show"] as boolean) ?? defaultSettings.showYAxis;
         settings.yAxisFontSize = (yAxisObj["fontSize"] as number) ?? defaultSettings.yAxisFontSize;
+        settings.yAxisFontFamily = (yAxisObj["fontFamily"] as string) ?? defaultSettings.yAxisFontFamily;
+        settings.yAxisBold = (yAxisObj["bold"] as boolean) ?? defaultSettings.yAxisBold;
+        settings.yAxisItalic = (yAxisObj["italic"] as boolean) ?? defaultSettings.yAxisItalic;
+        settings.yAxisUnderline = (yAxisObj["underline"] as boolean) ?? defaultSettings.yAxisUnderline;
+        const yColor = yAxisObj["color"] as any;
+        if (yColor?.solid?.color) settings.yAxisColor = yColor.solid.color;
     }
 
     // Text Sizes settings
@@ -182,8 +203,8 @@ export function parseSettings(dataView: DataView): IBumpChartVisualSettings {
         settings.smallMultiples.titleFontSize = (smallMultObj["titleFontSize"] as number) ?? defaultSettings.smallMultiples.titleFontSize;
         settings.smallMultiples.titleSpacing = (smallMultObj["titleSpacing"] as number) ?? defaultSettings.smallMultiples.titleSpacing;
         settings.smallMultiples.columns = Math.max(1, Math.min(6, settings.smallMultiples.columns));
-        settings.smallMultiples.spacing = Math.max(10, Math.min(50, settings.smallMultiples.spacing));
-        settings.smallMultiples.titleSpacing = Math.max(10, Math.min(50, settings.smallMultiples.titleSpacing));
+        settings.smallMultiples.spacing = Math.max(10, Math.min(200, settings.smallMultiples.spacing));
+        settings.smallMultiples.titleSpacing = Math.max(10, Math.min(120, settings.smallMultiples.titleSpacing));
     }
 
     return settings;

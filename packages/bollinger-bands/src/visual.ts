@@ -13,6 +13,7 @@ import ITooltipService = powerbi.extensibility.ITooltipService;
 import {
     RenderContext,
     createLegendCard,
+    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     createXAxisCard,
@@ -198,7 +199,8 @@ export class Visual implements IVisual {
             lines: [
                 "Date/Time: Date field for X-axis",
                 "Legend (optional): Split into series",
-                "Value: Numeric measure (e.g., closing price)"
+                "Value: Numeric measure (e.g., closing price)",
+                "Group (optional): Split into panels"
             ],
             hint: "Tip: Adjust Period (N) and Std Deviations (K) in the Format pane."
         });
@@ -242,13 +244,23 @@ export class Visual implements IVisual {
 
         cards.push(createYAxisCard({
             show: this.settings.showYAxis,
-            fontSize: this.settings.yAxisFontSize
+            fontSize: this.settings.yAxisFontSize,
+            fontFamily: this.settings.yAxisFontFamily,
+            bold: this.settings.yAxisBold,
+            italic: this.settings.yAxisItalic,
+            underline: this.settings.yAxisUnderline,
+            color: this.settings.yAxisColor
         }));
 
         cards.push(createXAxisCard({
             show: this.settings.showXAxis,
             fontSize: this.settings.xAxisFontSize,
-            rotateLabels: this.settings.rotateXLabels
+            rotateLabels: this.settings.rotateXLabels,
+            fontFamily: this.settings.xAxisFontFamily,
+            bold: this.settings.xAxisBold,
+            italic: this.settings.xAxisItalic,
+            underline: this.settings.xAxisUnderline,
+            color: this.settings.xAxisColor
         }));
 
         cards.push(createTextSizesCard({
@@ -256,6 +268,12 @@ export class Visual implements IVisual {
             yAxisFontSize: this.settings.textSizes.yAxisFontSize || this.settings.yAxisFontSize,
             legendFontSize: this.settings.textSizes.legendFontSize || this.settings.legendFontSize,
             panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize
+        }));
+
+        cards.push(createSmallMultiplesCard({
+            spacing: this.settings.smallMultiples.spacing,
+            showTitle: this.settings.smallMultiples.showTitle,
+            titleSpacing: this.settings.smallMultiples.titleSpacing
         }));
 
         return { cards };

@@ -15,6 +15,7 @@ import {
     createColorSchemeCard,
     createGradientColorsCard,
     createHeatmapSettingsCard,
+    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     createXAxisCard,
@@ -119,7 +120,8 @@ export class Visual implements IVisual {
             lines: [
                 "X-Axis: Column hierarchy (up to 5 levels)",
                 "Y-Axis: Row hierarchy (up to 5 levels)",
-                "Values: Measure (cell intensity)"
+                "Values: Measure (cell intensity)",
+                "Group (optional): Split into panels"
             ],
             hint: "Tip: Turn on Value Labels if you want numbers inside cells."
         });
@@ -164,13 +166,23 @@ export class Visual implements IVisual {
 
         cards.push(createYAxisCard({
             show: this.settings.showYAxis,
-            fontSize: this.settings.yAxisFontSize
+            fontSize: this.settings.yAxisFontSize,
+            fontFamily: this.settings.yAxisFontFamily,
+            bold: this.settings.yAxisBold,
+            italic: this.settings.yAxisItalic,
+            underline: this.settings.yAxisUnderline,
+            color: this.settings.yAxisColor
         }));
 
         cards.push(createXAxisCard({
             show: this.settings.showXAxis,
             fontSize: this.settings.xAxisFontSize,
-            rotateLabels: this.settings.rotateXLabels
+            rotateLabels: this.settings.rotateXLabels,
+            fontFamily: this.settings.xAxisFontFamily,
+            bold: this.settings.xAxisBold,
+            italic: this.settings.xAxisItalic,
+            underline: this.settings.xAxisUnderline,
+            color: this.settings.xAxisColor
         }));
 
         cards.push(createTextSizesCard({
@@ -178,6 +190,12 @@ export class Visual implements IVisual {
             yAxisFontSize: this.settings.textSizes.yAxisFontSize || this.settings.yAxisFontSize,
             panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize,
             valueLabelFontSize: this.settings.textSizes.valueLabelFontSize || 10
+        }));
+
+        cards.push(createSmallMultiplesCard({
+            spacing: this.settings.smallMultiples.spacing,
+            showTitle: this.settings.smallMultiples.showTitle,
+            titleSpacing: this.settings.smallMultiples.titleSpacing
         }));
 
         cards.push(createHeatmapSettingsCard(this.settings.heatmap));

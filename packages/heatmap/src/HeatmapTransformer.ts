@@ -7,7 +7,7 @@ import DataViewMatrixNode = powerbi.DataViewMatrixNode;
 import DataViewHierarchyLevel = powerbi.DataViewHierarchyLevel;
 import DataViewMatrixGroupValue = powerbi.DataViewMatrixGroupValue;
 
-import { ChartData, DataPoint, formatDataValue } from "@pbi-visuals/shared";
+import { ChartData, DataPoint, formatDataValue, formatGroupValue } from "@pbi-visuals/shared";
 
 export interface AxisSpan {
     level: number;
@@ -104,12 +104,13 @@ function getNodeRoleParts(
     node: DataViewMatrixNode,
     levels: DataViewHierarchyLevel[],
     fallbackIndex: number
-): { yAxisParts: string[]; xAxisParts: string[] } {
+): { yAxisParts: string[]; xAxisParts: string[]; groupParts: string[] } {
     const yAxisParts: string[] = [];
     const xAxisParts: string[] = [];
+    const groupParts: string[] = [];
 
     if (node.level === undefined || node.level === null) {
-        return { yAxisParts, xAxisParts };
+        return { yAxisParts, xAxisParts, groupParts };
     }
 
     const level = levels[node.level];
@@ -118,13 +119,16 @@ function getNodeRoleParts(
     for (const lv of levelValues) {
         const source = level?.sources?.[lv.levelSourceIndex];
         const roles = source?.roles ?? {};
-        const label = valueToLabel(lv.value, fallbackIndex);
+        const label = roles["group"]
+            ? formatGroupValue(lv.value)
+            : valueToLabel(lv.value, fallbackIndex);
 
         if (roles["yAxis"]) yAxisParts.push(label);
         if (roles["xAxis"]) xAxisParts.push(label);
+        if (roles["group"]) groupParts.push(label);
     }
 
-    return { yAxisParts, xAxisParts };
+    return { yAxisParts, xAxisParts, groupParts };
 }
 
 function traverseMatrix(
@@ -293,12 +297,12 @@ export class HeatmapTransformer {
         const xAxis = buildAxisHierarchyFromLeafPaths(xLeafKeys, xLeafPaths);
 
         // ---- Rows (Y axis) ----
-        const groupNames: string[] = ["All"];
+        const groupNamesSet = new Set<string>();
         const yAxisByGroup = new Map<string, AxisHierarchy>();
 
-        const rowsBucket: { leafKeys: string[]; leafPaths: string[][]; leafNodes: DataViewMatrixNode[] } = { leafKeys: [], leafPaths: [], leafNodes: [] };
-
         let rowLeafGlobalCounter = 0;
+
+        const rowsByGroup = new Map<string, { leafKeys: string[]; leafPaths: string[][]; leafNodes: DataViewMatrixNode[] }>();
 
         traverseMatrix(matrix.rows.root, (n, path) => {
             if (!nodeIsLeaf(n) || n.level === undefined) {
@@ -306,10 +310,20 @@ export class HeatmapTransformer {
             }
 
             const yParts: string[] = [];
+            let groupValue: string | null = null;
 
             // Build role-based parts across the path.
             path.forEach((p) => {
                 const parts = getNodeRoleParts(p, matrix.rows.levels, rowLeafGlobalCounter);
+                if (groupValue === null && parts.groupParts.length) {
+                    groupValue = parts.groupParts.join(" • ");
+                }
+                // If this hierarchy node belongs to the Group role, it should *not* appear
+                // as part of the Y-axis labels (otherwise the group value is duplicated
+                // in the row headers while also being used as the panel title).
+                if (parts.groupParts.length && !parts.yAxisParts.length) {
+                    return;
+                }
                 if (parts.yAxisParts.length) {
                     yParts.push(parts.yAxisParts.join(" • "));
                     return;
@@ -323,15 +337,23 @@ export class HeatmapTransformer {
             });
 
             const yKey = yParts.join(KEY_SEP) || `row${rowLeafGlobalCounter}`;
-            rowsBucket.leafKeys.push(yKey);
-            rowsBucket.leafPaths.push(yParts);
-            rowsBucket.leafNodes.push(n);
+            const groupKey = (groupValue ?? "").trim() ? groupValue! : "All";
+            const bucket = rowsByGroup.get(groupKey) ?? { leafKeys: [], leafPaths: [], leafNodes: [] };
+            bucket.leafKeys.push(yKey);
+            bucket.leafPaths.push(yParts);
+            bucket.leafNodes.push(n);
+            rowsByGroup.set(groupKey, bucket);
+            groupNamesSet.add(groupKey);
 
             rowLeafGlobalCounter++;
         });
 
-        const rowsByGroup = new Map<string, { leafKeys: string[]; leafPaths: string[][]; leafNodes: DataViewMatrixNode[] }>();
-        rowsByGroup.set("All", rowsBucket);
+        const groupNames = Array.from(groupNamesSet);
+        if (groupNames.length === 0) {
+            groupNames.push("All");
+            rowsByGroup.set("All", { leafKeys: [], leafPaths: [], leafNodes: [] });
+        }
+        groupNames.sort((a, b) => a.localeCompare(b));
 
         // ---- Values ----
         let dataPointIndex = 0;

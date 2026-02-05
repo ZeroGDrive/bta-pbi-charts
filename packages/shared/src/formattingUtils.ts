@@ -396,6 +396,11 @@ export function createXAxisCard(settings: {
     show: boolean;
     fontSize?: number;
     rotateLabels?: RotateLabelsMode;
+    fontFamily?: string;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    color?: string;
 }): powerbi.visuals.FormattingCard {
     const slices: powerbi.visuals.FormattingSlice[] = [
         {
@@ -424,6 +429,76 @@ export function createXAxisCard(settings: {
                         minValue: { type: powerbi.visuals.ValidatorType.Min, value: 6 },
                         maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 40 }
                     }
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.fontFamily !== undefined) {
+        slices.push({
+            uid: "xAxis_fontFamily",
+            displayName: "Font Family",
+            control: {
+                type: powerbi.visuals.FormattingComponent.FontPicker,
+                properties: {
+                    descriptor: { objectName: "xAxisSettings", propertyName: "fontFamily" },
+                    value: settings.fontFamily
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.color !== undefined) {
+        slices.push({
+            uid: "xAxis_color",
+            displayName: "Color",
+            control: {
+                type: powerbi.visuals.FormattingComponent.ColorPicker,
+                properties: {
+                    descriptor: { objectName: "xAxisSettings", propertyName: "color" },
+                    value: { value: settings.color }
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.bold !== undefined) {
+        slices.push({
+            uid: "xAxis_bold",
+            displayName: "Bold",
+            control: {
+                type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                properties: {
+                    descriptor: { objectName: "xAxisSettings", propertyName: "bold" },
+                    value: settings.bold
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.italic !== undefined) {
+        slices.push({
+            uid: "xAxis_italic",
+            displayName: "Italic",
+            control: {
+                type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                properties: {
+                    descriptor: { objectName: "xAxisSettings", propertyName: "italic" },
+                    value: settings.italic
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.underline !== undefined) {
+        slices.push({
+            uid: "xAxis_underline",
+            displayName: "Underline",
+            control: {
+                type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                properties: {
+                    descriptor: { objectName: "xAxisSettings", propertyName: "underline" },
+                    value: settings.underline
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -460,6 +535,11 @@ export function createXAxisCard(settings: {
 export function createYAxisCard(settings: {
     show: boolean;
     fontSize?: number;
+    fontFamily?: string;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    color?: string;
 }): powerbi.visuals.FormattingCard {
     const slices: powerbi.visuals.FormattingSlice[] = [
         {
@@ -488,6 +568,76 @@ export function createYAxisCard(settings: {
                         minValue: { type: powerbi.visuals.ValidatorType.Min, value: 6 },
                         maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 40 }
                     }
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.fontFamily !== undefined) {
+        slices.push({
+            uid: "yAxis_fontFamily",
+            displayName: "Font Family",
+            control: {
+                type: powerbi.visuals.FormattingComponent.FontPicker,
+                properties: {
+                    descriptor: { objectName: "yAxisSettings", propertyName: "fontFamily" },
+                    value: settings.fontFamily
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.color !== undefined) {
+        slices.push({
+            uid: "yAxis_color",
+            displayName: "Color",
+            control: {
+                type: powerbi.visuals.FormattingComponent.ColorPicker,
+                properties: {
+                    descriptor: { objectName: "yAxisSettings", propertyName: "color" },
+                    value: { value: settings.color }
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.bold !== undefined) {
+        slices.push({
+            uid: "yAxis_bold",
+            displayName: "Bold",
+            control: {
+                type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                properties: {
+                    descriptor: { objectName: "yAxisSettings", propertyName: "bold" },
+                    value: settings.bold
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.italic !== undefined) {
+        slices.push({
+            uid: "yAxis_italic",
+            displayName: "Italic",
+            control: {
+                type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                properties: {
+                    descriptor: { objectName: "yAxisSettings", propertyName: "italic" },
+                    value: settings.italic
+                }
+            }
+        } as powerbi.visuals.FormattingSlice);
+    }
+
+    if (settings.underline !== undefined) {
+        slices.push({
+            uid: "yAxis_underline",
+            displayName: "Underline",
+            control: {
+                type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                properties: {
+                    descriptor: { objectName: "yAxisSettings", propertyName: "underline" },
+                    value: settings.underline
                 }
             }
         } as powerbi.visuals.FormattingSlice);

@@ -28,17 +28,29 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
             ? this.getLegendReservation({ isOrdinal: true, categories: seriesKeys })
             : { top: 0, right: 0, bottom: 0, left: 0 };
 
+        const titleSpacing = settings.smallMultiples.titleSpacing || 25;
+        const panelTitleFontSize = this.getEffectiveFontSize(
+            settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
+            6,
+            40
+        );
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
+        const interPanelGap = groups.length > 1
+            ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
+            : 0;
+
         // Calculate margins
         const yAxisWidth = settings.showYAxis ? 60 : 10;
         const margin = {
-            top: 12 + legendReserve.top,
+            top: 12 + legendReserve.top + titleReserve,
             right: 12 + legendReserve.right,
             bottom: (settings.showXAxis ? 45 : 12) + legendReserve.bottom,
             left: yAxisWidth + legendReserve.left
         };
 
         const groupCount = groups.length;
-        const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
+        const totalSpacing = (groupCount - 1) * interPanelGap;
         const availableHeight = this.context.height - margin.top - margin.bottom - totalSpacing;
         const chartWidth = this.context.width - margin.left - margin.right;
 
@@ -530,7 +542,11 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                         .attr("dy", "0.32em")
                         .attr("text-anchor", "end")
                         .attr("font-size", `${yAxisFontSize}px`)
-                        .attr("fill", "#666")
+                        .attr("font-family", settings.yAxisFontFamily)
+                        .style("font-weight", settings.yAxisBold ? "700" : "400")
+                        .style("font-style", settings.yAxisItalic ? "italic" : "normal")
+                        .style("text-decoration", settings.yAxisUnderline ? "underline" : "none")
+                        .attr("fill", settings.yAxisColor)
                         .text(formatMeasureValue(tick, bollingerData.valueFormatString));
                 });
             }
@@ -551,7 +567,8 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                     mode: settings.rotateXLabels,
                     labels: xDisplayLabels,
                     availableWidth: chartWidth,
-                    fontSize: xAxisFontSize
+                    fontSize: xAxisFontSize,
+                    fontFamily: settings.xAxisFontFamily
                 });
                 const shouldRotate = rotationResult.shouldRotate;
                 const skipInterval = rotationResult.skipInterval;
@@ -571,7 +588,11 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                         .attr("x", x)
                         .attr("y", shouldRotate ? 5 : 15)
                         .attr("font-size", `${xAxisFontSize}px`)
-                        .attr("fill", "#666")
+                        .attr("font-family", settings.xAxisFontFamily)
+                        .style("font-weight", settings.xAxisBold ? "700" : "400")
+                        .style("font-style", settings.xAxisItalic ? "italic" : "normal")
+                        .style("text-decoration", settings.xAxisUnderline ? "underline" : "none")
+                        .attr("fill", settings.xAxisColor)
                         .text(displayText);
 
                     if (displayText !== xDisplayLabels[i]) {
@@ -589,7 +610,7 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                 });
             }
 
-            currentY += groupHeight + settings.smallMultiples.spacing;
+            currentY += groupHeight + interPanelGap;
         });
 
         if (hasLegendRoleData) {

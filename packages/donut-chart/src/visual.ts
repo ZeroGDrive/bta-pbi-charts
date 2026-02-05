@@ -18,6 +18,7 @@ import {
     createDonutLabelsCard,
     createDonutSettingsCard,
     createLegendCard,
+    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     findCategoryIndex,
@@ -149,7 +150,8 @@ export class Visual implements IVisual {
             title: "Set up Donut Chart",
             lines: [
                 "Legend: Slice labels",
-                "Values: Measure (slice size)"
+                "Values: Measure (slice size)",
+                "Group (optional): Split into panels"
             ],
             hint: "Tip: Use the Tooltips and Data Labels cards for a polished experience."
         });
@@ -210,6 +212,12 @@ export class Visual implements IVisual {
             sliceLabelFontSize: this.settings.textSizes.sliceLabelFontSize || 11,
             centerLabelFontSize: this.settings.textSizes.centerLabelFontSize || 11,
             centerValueFontSize: this.settings.textSizes.centerValueFontSize || 20
+        }));
+
+        cards.push(createSmallMultiplesCard({
+            spacing: this.settings.smallMultiples.spacing,
+            showTitle: this.settings.smallMultiples.showTitle,
+            titleSpacing: this.settings.smallMultiples.titleSpacing
         }));
 
         cards.push(createDonutSettingsCard(this.settings.donut));

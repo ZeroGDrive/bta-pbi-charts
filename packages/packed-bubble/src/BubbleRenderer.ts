@@ -31,8 +31,20 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
         const legendCategories = bubbleData.hasLegendRoleData ? legendItems : [];
         const legendReserve = this.getLegendReservation({ isOrdinal: true, categories: legendCategories });
 
+        const titleSpacing = settings.smallMultiples.titleSpacing || 25;
+        const panelTitleFontSize = this.getEffectiveFontSize(
+            settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
+            6,
+            40
+        );
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
+        const interPanelGap = groups.length > 1
+            ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
+            : 0;
+
         const margin = {
-            top: 12 + legendReserve.top,
+            top: 12 + legendReserve.top + titleReserve,
             right: 12 + legendReserve.right,
             bottom: 12 + legendReserve.bottom,
             left: 12 + legendReserve.left
@@ -40,7 +52,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
 
         const chartWidth = this.context.width - margin.left - margin.right;
         const groupCount = groups.length;
-        const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
+        const totalSpacing = (groupCount - 1) * interPanelGap;
         const availableHeight = this.context.height - margin.top - margin.bottom - totalSpacing;
 
         // Color scale for legend groups. If no legend role is bound, keep a single crisp color (native-like).
@@ -205,7 +217,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
                     .text(d => this.truncateLabel(d.category, d.radius, getFontSize(d.radius)));
             }
 
-            currentY += groupHeight + settings.smallMultiples.spacing;
+            currentY += groupHeight + interPanelGap;
         });
 
         // Categorical legend - use same color scale with overrides

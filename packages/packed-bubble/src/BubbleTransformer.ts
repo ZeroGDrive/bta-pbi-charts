@@ -2,6 +2,7 @@
 
 import powerbi from "powerbi-visuals-api";
 import DataViewCategorical = powerbi.DataViewCategorical;
+import { formatGroupValue } from "@pbi-visuals/shared";
 
 export interface BubbleNode {
     id: string;
@@ -49,41 +50,60 @@ export class BubbleTransformer {
             });
         }
 
-        const values = categorical.values?.[0]?.values || [];
-        const valueFormatString = (categorical.values?.[0]?.source as any)?.format as string | undefined;
+        const groupedValues = (categorical.values as any)?.grouped?.() as Array<any> | undefined;
+        const valueGroups: Array<{ groupValue: string; values: any[] }> = [];
 
-        for (let i = 0; i < values.length; i++) {
-            // Use yAxis for category (bubble grouping), fallback to legend if no yAxis
-            const categorySource = yAxisIndex >= 0 ? yAxisIndex : legendIndex;
-            const category = categorySource >= 0
-                ? String(categorical.categories![categorySource].values[i] ?? "")
-                : "All";
-            const groupValue = "All";
-            const legendKeyRaw = legendIndex >= 0 ? categorical.categories![legendIndex].values[i] : null;
-            const legendKey = legendIndex >= 0 ? String(legendKeyRaw ?? "") : "All";
-            const value = Number(values[i]) || 0;
-
-            if (value > 0) {
-                if (value > maxValue) maxValue = value;
-                if (value < minValue) minValue = value;
-
-                categoriesSet.add(category);
-                groupsSet.add(groupValue);
-                if (legendIndex >= 0 && legendKey) {
-                    legendItemsSet.add(legendKey);
-                }
-
-                nodes.push({
-                    id: `bubble-${i}`,
-                    category,
-                    value,
-                    radius: 0, // Will be calculated based on scale
-                    groupValue,
-                    legendKey: legendKey || "All",
-                    index: i
-                });
+        if (groupedValues && groupedValues.length > 0) {
+            for (const g of groupedValues) {
+                const groupValue = formatGroupValue(g?.name);
+                const groupValues = (g?.values?.[0]?.values as any[]) ?? [];
+                valueGroups.push({ groupValue, values: groupValues });
             }
+        } else {
+            valueGroups.push({ groupValue: "All", values: (categorical.values?.[0]?.values as any[]) ?? [] });
         }
+
+        const valueFormatString =
+            (groupedValues?.[0]?.values?.[0]?.source as any)?.format as string | undefined
+            ?? (categorical.values?.[0]?.source as any)?.format as string | undefined;
+
+        let nodeIdCounter = 0;
+        valueGroups.forEach((vg, groupIdx) => {
+            const groupValue = vg.groupValue;
+            const values = vg.values ?? [];
+            groupsSet.add(groupValue);
+
+            for (let i = 0; i < values.length; i++) {
+                // Use yAxis for category (bubble grouping), fallback to legend if no yAxis
+                const categorySource = yAxisIndex >= 0 ? yAxisIndex : legendIndex;
+                const category = categorySource >= 0
+                    ? String(categorical.categories![categorySource].values[i] ?? "")
+                    : "All";
+                const legendKeyRaw = legendIndex >= 0 ? categorical.categories![legendIndex].values[i] : null;
+                const legendKey = legendIndex >= 0 ? String(legendKeyRaw ?? "") : "All";
+                const value = Number(values[i]) || 0;
+
+                if (value > 0) {
+                    if (value > maxValue) maxValue = value;
+                    if (value < minValue) minValue = value;
+
+                    categoriesSet.add(category);
+                    if (legendIndex >= 0 && legendKey) {
+                        legendItemsSet.add(legendKey);
+                    }
+
+                    nodes.push({
+                        id: `bubble-${groupIdx}-${i}-${nodeIdCounter++}`,
+                        category,
+                        value,
+                        radius: 0, // Will be calculated based on scale
+                        groupValue,
+                        legendKey: legendKey || "All",
+                        index: i
+                    });
+                }
+            }
+        });
 
         const categories = Array.from(categoriesSet).sort();
         const legendItems = Array.from(legendItemsSet).sort();

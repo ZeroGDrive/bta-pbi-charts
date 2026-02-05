@@ -69,7 +69,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
         xValues.forEach((v, i) => xLabelByValue.set(v, xDisplayLabels[i]));
 
         // Calculate left label margin using real text measurement
-        const maxYLabelWidth = measureMaxLabelWidth(yValues, yAxisFontSize, "Inter, sans-serif");
+        const maxYLabelWidth = measureMaxLabelWidth(yValues, yAxisFontSize, settings.yAxisFontFamily);
         const leftLabelWidth = settings.showYAxis
             ? Math.min(
                 Math.max(60, Math.round(this.context.width * 0.35)),
@@ -92,7 +92,8 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
             mode: settings.rotateXLabels,
             labels: xDisplayLabels,
             availableWidth: availableWidthForLabels,
-            fontSize: xAxisFontSize
+            fontSize: xAxisFontSize,
+            fontFamily: settings.xAxisFontFamily
         });
         let needsRotation = rotationResult.shouldRotate;
         const labelSkipInterval = rotationResult.skipInterval;
@@ -100,7 +101,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
         // If auto-rotation decided to rotate, but we are already skipping labels,
         // re-check whether the remaining visible labels can fit without rotation.
         if (settings.rotateXLabels === "auto" && needsRotation && labelSkipInterval > 1 && xValues.length > 1) {
-            const fontFamily = "Segoe UI, sans-serif";
+            const fontFamily = settings.xAxisFontFamily;
             const padding = 4;
             const visibleIndices: number[] = [];
 
@@ -130,8 +131,20 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
             }
         }
 
+        const titleSpacing = settings.smallMultiples.titleSpacing || 25;
+        const panelTitleFontSize = this.getEffectiveFontSize(
+            settings.textSizes.panelTitleFontSize > 0 ? settings.textSizes.panelTitleFontSize : settings.smallMultiples.titleFontSize,
+            6,
+            40
+        );
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
+        const interPanelGap = groups.length > 1
+            ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
+            : 0;
+
         const baseMargin = {
-            top: 12,
+            top: 12 + titleReserve,
             right: 12,
             bottom: settings.showXAxis ? (needsRotation ? 45 : 28) : 12,
             left: leftLabelWidth
@@ -152,7 +165,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
         }
 
         const groupCount = groups.length || 1;
-        const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
+        const totalSpacing = (groupCount - 1) * interPanelGap;
         const colorScale = this.getCategoryColors(yValues, bumpData.categoryColorMap);
 
         const availableHeight = this.context.height - margin.top - margin.bottom - totalSpacing;
@@ -281,6 +294,9 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                 });
             }
 
+            const defaultYAxisColor = "#333333";
+            const overrideYAxisColor = (settings.yAxisColor || "").toLowerCase() !== defaultYAxisColor;
+
             // Y-axis: Category labels on LEFT (colored to match lines)
             if (settings.showYAxis) {
                 // Get the first data point for each category to find their starting rank
@@ -292,7 +308,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                     if (points.length === 0) return;
 
                     const firstPoint = points[0];
-                    const color = colorScale(yVal);
+                    const seriesColor = colorScale(yVal);
                     const maxLabelWidth = Math.max(0, baseMargin.left - 18);
                     const displayLabel = formatLabel(yVal, maxLabelWidth, yAxisFontSize);
 
@@ -303,7 +319,11 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                         .attr("dy", "0.35em")
                         .attr("text-anchor", "end")
                         .attr("font-size", `${yAxisFontSize}px`)
-                        .attr("fill", color)
+                        .attr("font-family", settings.yAxisFontFamily)
+                        .style("font-weight", settings.yAxisBold ? "700" : "400")
+                        .style("font-style", settings.yAxisItalic ? "italic" : "normal")
+                        .style("text-decoration", settings.yAxisUnderline ? "underline" : "none")
+                        .attr("fill", overrideYAxisColor ? settings.yAxisColor : seriesColor)
                         .text(displayLabel);
 
                     if (displayLabel !== yVal) {
@@ -331,7 +351,11 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                         .attr("dy", "0.35em")
                         .attr("text-anchor", "end")
                         .attr("font-size", `${endLabelFontSize}px`)
-                        .attr("fill", color)
+                        .attr("font-family", settings.yAxisFontFamily)
+                        .style("font-weight", settings.yAxisBold ? "700" : "400")
+                        .style("font-style", settings.yAxisItalic ? "italic" : "normal")
+                        .style("text-decoration", settings.yAxisUnderline ? "underline" : "none")
+                        .attr("fill", overrideYAxisColor ? settings.yAxisColor : color)
                         .text(displayLabel);
 
                     if (displayLabel !== yVal) {
@@ -364,7 +388,11 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                         .attr("x", x)
                         .attr("y", shouldRotate ? 5 : 12)
                         .attr("font-size", `${xAxisFontSize}px`)
-                        .attr("fill", "#666")
+                        .attr("font-family", settings.xAxisFontFamily)
+                        .style("font-weight", settings.xAxisBold ? "700" : "400")
+                        .style("font-style", settings.xAxisItalic ? "italic" : "normal")
+                        .style("text-decoration", settings.xAxisUnderline ? "underline" : "none")
+                        .attr("fill", settings.xAxisColor)
                         .text(displayText);
 
                     if (displayText !== xDisplayLabels[i]) {
@@ -382,7 +410,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                 });
             }
 
-            currentY += groupHeight + settings.smallMultiples.spacing;
+            currentY += groupHeight + interPanelGap;
         });
 
         // Legend (data-driven; docked, never overlaps content)

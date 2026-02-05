@@ -13,6 +13,12 @@
       "description": "Categories displayed as rows"
     },
     {
+      "displayName": "Group",
+      "name": "group",
+      "kind": "Grouping",
+      "description": "Splits the heatmap into small multiples (one panel per group)"
+    },
+    {
       "displayName": "Values",
       "name": "values",
       "kind": "Measure",
@@ -140,6 +146,26 @@
           "displayName": "Font Size",
           "type": { "formatting": { "fontSize": true } }
         },
+        "fontFamily": {
+          "displayName": "Font Family",
+          "type": { "text": true }
+        },
+        "color": {
+          "displayName": "Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "bold": {
+          "displayName": "Bold",
+          "type": { "bool": true }
+        },
+        "italic": {
+          "displayName": "Italic",
+          "type": { "bool": true }
+        },
+        "underline": {
+          "displayName": "Underline",
+          "type": { "bool": true }
+        },
         "rotateLabels": {
           "displayName": "Rotate Labels",
           "description": "Control X-axis label rotation",
@@ -163,6 +189,26 @@
         "fontSize": {
           "displayName": "Font Size",
           "type": { "formatting": { "fontSize": true } }
+        },
+        "fontFamily": {
+          "displayName": "Font Family",
+          "type": { "text": true }
+        },
+        "color": {
+          "displayName": "Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "bold": {
+          "displayName": "Bold",
+          "type": { "bool": true }
+        },
+        "italic": {
+          "displayName": "Italic",
+          "type": { "bool": true }
+        },
+        "underline": {
+          "displayName": "Underline",
+          "type": { "bool": true }
         }
       }
     },
@@ -248,6 +294,27 @@
           "type": { "formatting": { "fontSize": true } }
         }
       }
+    },
+    "smallMultiples": {
+      "displayName": "Small Multiples",
+      "properties": {
+        "spacing": {
+          "displayName": "Panel Spacing",
+          "type": { "numeric": true }
+        },
+        "showTitle": {
+          "displayName": "Show Panel Titles",
+          "type": { "bool": true }
+        },
+        "titleFontSize": {
+          "displayName": "Title Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "titleSpacing": {
+          "displayName": "Title Spacing",
+          "type": { "numeric": true }
+        }
+      }
     }
   },
   "dataViewMappings": [
@@ -256,13 +323,15 @@
         {
           "xAxis": { "max": 5 },
           "yAxis": { "max": 5 },
+          "group": { "max": 1 },
           "values": { "max": 1 }
         }
       ],
       "matrix": {
         "rows": {
           "select": [
-            { "for": { "in": "yAxis" } }
+            { "for": { "in": "yAxis" } },
+            { "for": { "in": "group" } }
           ],
           "dataReductionAlgorithm": {
             "top": { "count": 30000 }

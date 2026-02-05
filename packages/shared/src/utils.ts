@@ -12,6 +12,19 @@ export function formatDataValue(value: any, index: number): string {
     return String(value);
 }
 
+/**
+ * Formats a grouping value for display.
+ * Unlike `formatDataValue`, blanks are rendered as "(Blank)" to avoid
+ * generating synthetic per-row labels that create noisy group panels.
+ */
+export function formatGroupValue(value: any): string {
+    if (value === null || value === undefined) {
+        return "(Blank)";
+    }
+    const str = String(value);
+    return str.trim() ? str : "(Blank)";
+}
+
 export function formatMeasureValue(
     value: number | null | undefined,
     formatString?: string,

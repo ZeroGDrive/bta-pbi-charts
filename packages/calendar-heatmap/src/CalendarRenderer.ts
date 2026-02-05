@@ -48,16 +48,28 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
             40
         );
 
-        const yearLabelWidth = measureMaxLabelWidth(years.map(y => y.toString()), yearFontSizeForMargin);
+        const yearLabelWidth = measureMaxLabelWidth(years.map(y => y.toString()), yearFontSizeForMargin, settings.yAxisFontFamily);
         const dayLabelWidth = settings.showYAxis
-            ? measureMaxLabelWidth(dayLabels.map(d => d.substring(0, 1)), dayFontSizeForMargin)
+            ? measureMaxLabelWidth(dayLabels.map(d => d.substring(0, 1)), dayFontSizeForMargin, settings.yAxisFontFamily)
             : 0;
 
         const dayGutter = settings.showYAxis ? Math.ceil(dayLabelWidth + 10) : 0;
         const leftGutter = Math.ceil(yearLabelWidth + 12 + dayGutter);
 
+        const titleSpacing = settings.smallMultiples.titleSpacing || 25;
+        const panelTitleFontSize = this.getEffectiveFontSize(
+            settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
+            6,
+            40
+        );
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
+        const interPanelGap = groups.length > 1
+            ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
+            : 0;
+
         const margin = {
-            top: 12,
+            top: 12 + titleReserve,
             right: 12,
             bottom: 12,
             left: leftGutter
@@ -65,7 +77,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
         const chartWidth = this.context.width - margin.left - margin.right;
 
         const groupCount = groups.length || 1;
-        const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
+        const totalSpacing = (groupCount - 1) * interPanelGap;
         const availableHeight = this.context.height - margin.top - margin.bottom - totalSpacing;
         const groupHeightTarget = availableHeight / groupCount;
 
@@ -157,8 +169,11 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                     .attr("dy", "0.35em")
                     .attr("text-anchor", "end")
                     .attr("font-size", `${yearFontSize}px`)
-                    .attr("font-weight", "bold")
-                    .attr("fill", "#333")
+                    .attr("font-family", settings.yAxisFontFamily)
+                    .style("font-weight", settings.yAxisBold ? "700" : "400")
+                    .style("font-style", settings.yAxisItalic ? "italic" : "normal")
+                    .style("text-decoration", settings.yAxisUnderline ? "underline" : "none")
+                    .attr("fill", settings.yAxisColor)
                     .text(year.toString());
 
                 // Day labels (Y-axis) - manual override or responsive font size
@@ -171,7 +186,11 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                                 .attr("y", Math.round(i * (cellSize) + (i * cellPadding) + cellSize / 2))
                                 .attr("dy", "0.35em")
                                 .attr("font-size", `${dayFontSize}px`)
-                                .attr("fill", "#999")
+                                .attr("font-family", settings.yAxisFontFamily)
+                                .style("font-weight", settings.yAxisBold ? "700" : "400")
+                                .style("font-style", settings.yAxisItalic ? "italic" : "normal")
+                                .style("text-decoration", settings.yAxisUnderline ? "underline" : "none")
+                                .attr("fill", settings.yAxisColor)
                                 .text(day.substring(0, 1));
                         }
                     });
@@ -256,7 +275,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                 yearOffsetY += yearHeight;
             });
 
-            currentY += groupHeightTarget + settings.smallMultiples.spacing;
+            currentY += groupHeightTarget + interPanelGap;
         });
 
         // Calendar heatmap has no legend by design (tooltips carry the details).

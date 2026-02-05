@@ -2,7 +2,7 @@
 
 import powerbi from "powerbi-visuals-api";
 import DataViewCategorical = powerbi.DataViewCategorical;
-import { ChartData, DataPoint } from "@pbi-visuals/shared";
+import { ChartData, DataPoint, formatGroupValue } from "@pbi-visuals/shared";
 
 export interface CalendarDataPoint extends DataPoint {
     date: Date;
@@ -41,45 +41,63 @@ export class CalendarTransformer {
             });
         }
 
-        const values = categorical.values?.[0]?.values || [];
-        const valueFormatString = (categorical.values?.[0]?.source as any)?.format as string | undefined;
+        const groupedValues = (categorical.values as any)?.grouped?.() as Array<any> | undefined;
+        const valueGroups: Array<{ groupValue: string; values: any[] }> = [];
 
-        for (let i = 0; i < values.length; i++) {
-            const rawXValue = xAxisIndex >= 0 ? categorical.categories![xAxisIndex].values[i] : null;
-            const groupValue = "All";
-            const value = Number(values[i]) || 0;
+        if (groupedValues && groupedValues.length > 0) {
+            for (const g of groupedValues) {
+                const groupValue = formatGroupValue(g?.name);
+                const groupValues = (g?.values?.[0]?.values as any[]) ?? [];
+                valueGroups.push({ groupValue, values: groupValues });
+            }
+        } else {
+            valueGroups.push({ groupValue: "All", values: (categorical.values?.[0]?.values as any[]) ?? [] });
+        }
 
-            // Parse date from x-axis value
-            const date = CalendarTransformer.parseDate(rawXValue);
-            if (!date) continue;
+        const valueFormatString =
+            (groupedValues?.[0]?.values?.[0]?.source as any)?.format as string | undefined
+            ?? (categorical.values?.[0]?.source as any)?.format as string | undefined;
 
-            const xValue = CalendarTransformer.formatDateString(date);
+        let pointIndex = 0;
+        for (const vg of valueGroups) {
+            const values = vg.values ?? [];
+            for (let i = 0; i < values.length; i++) {
+                const rawXValue = xAxisIndex >= 0 ? categorical.categories![xAxisIndex].values[i] : null;
+                const groupValue = vg.groupValue;
+                const value = Number(values[i]) || 0;
 
-            if (value > maxValue) maxValue = value;
-            if (value < minValue && value > 0) minValue = value;
+                // Parse date from x-axis value
+                const date = CalendarTransformer.parseDate(rawXValue);
+                if (!date) continue;
 
-            if (!minDate || date < minDate) minDate = date;
-            if (!maxDate || date > maxDate) maxDate = date;
+                const xValue = CalendarTransformer.formatDateString(date);
 
-            xValuesSet.add(xValue);
-            groupsSet.add(groupValue);
-            yearsSet.add(date.getFullYear());
+                if (value > maxValue) maxValue = value;
+                if (value < minValue && value > 0) minValue = value;
 
-            const calendarPoint: CalendarDataPoint = {
-                xValue,
-                yValue: "",
-                value,
-                groupValue,
-                index: i,
-                date,
-                dayOfWeek: date.getDay(),
-                weekOfYear: CalendarTransformer.getWeekOfYear(date),
-                month: date.getMonth(),
-                year: date.getFullYear()
-            };
+                if (!minDate || date < minDate) minDate = date;
+                if (!maxDate || date > maxDate) maxDate = date;
 
-            dataPoints.push(calendarPoint);
-            calendarPoints.push(calendarPoint);
+                xValuesSet.add(xValue);
+                groupsSet.add(groupValue);
+                yearsSet.add(date.getFullYear());
+
+                const calendarPoint: CalendarDataPoint = {
+                    xValue,
+                    yValue: "",
+                    value,
+                    groupValue,
+                    index: pointIndex++,
+                    date,
+                    dayOfWeek: date.getDay(),
+                    weekOfYear: CalendarTransformer.getWeekOfYear(date),
+                    month: date.getMonth(),
+                    year: date.getFullYear()
+                };
+
+                dataPoints.push(calendarPoint);
+                calendarPoints.push(calendarPoint);
+            }
         }
 
         const xValues = Array.from(xValuesSet).sort();

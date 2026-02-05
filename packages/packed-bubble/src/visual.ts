@@ -17,6 +17,7 @@ import {
     createColorSchemeCard,
     createDataColorsCard,
     createLegendCard,
+    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     findCategoryIndex,
@@ -168,7 +169,8 @@ export class Visual implements IVisual {
             lines: [
                 "Category: Bubble group (color/labels)",
                 "Values: Measure (bubble size)",
-                "Legend (optional): Color by field"
+                "Legend (optional): Color by field",
+                "Group (optional): Split into panels"
             ],
             hint: "Tip: Enable clustering in the Format pane for grouped layouts."
         });
@@ -254,6 +256,12 @@ export class Visual implements IVisual {
         cards.push(createTextSizesCard({
             legendFontSize: this.settings.textSizes.legendFontSize || this.settings.legendFontSize,
             panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize
+        }));
+
+        cards.push(createSmallMultiplesCard({
+            spacing: this.settings.smallMultiples.spacing,
+            showTitle: this.settings.smallMultiples.showTitle,
+            titleSpacing: this.settings.smallMultiples.titleSpacing
         }));
 
         cards.push(createBubbleSettingsCard(this.settings.bubble));

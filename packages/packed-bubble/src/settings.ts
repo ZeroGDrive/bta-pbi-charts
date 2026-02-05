@@ -42,8 +42,18 @@ export const defaultSettings: IBubbleVisualSettings = {
     maxLegendItems: defaultLegendSettings.maxLegendItems!,
     showXAxis: false,
     xAxisFontSize: 10,
+    xAxisFontFamily: "Segoe UI",
+    xAxisBold: false,
+    xAxisItalic: false,
+    xAxisUnderline: false,
+    xAxisColor: "#666666",
     showYAxis: false,
     yAxisFontSize: 11,
+    yAxisFontFamily: "Segoe UI",
+    yAxisBold: false,
+    yAxisItalic: false,
+    yAxisUnderline: false,
+    yAxisColor: "#333333",
     rotateXLabels: "never",  // Packed bubble doesn't use X-axis but needs the property
     tooltip: { ...defaultTooltipSettings },
     useCustomColors: defaultCustomColorSettings.useCustomColors,
@@ -170,8 +180,8 @@ export function parseSettings(dataView: DataView): IBubbleVisualSettings {
         settings.smallMultiples.titleFontSize = (smallMultObj["titleFontSize"] as number) ?? defaultSettings.smallMultiples.titleFontSize;
         settings.smallMultiples.titleSpacing = (smallMultObj["titleSpacing"] as number) ?? defaultSettings.smallMultiples.titleSpacing;
         settings.smallMultiples.columns = Math.max(1, Math.min(6, settings.smallMultiples.columns));
-        settings.smallMultiples.spacing = Math.max(10, Math.min(50, settings.smallMultiples.spacing));
-        settings.smallMultiples.titleSpacing = Math.max(10, Math.min(50, settings.smallMultiples.titleSpacing));
+        settings.smallMultiples.spacing = Math.max(10, Math.min(200, settings.smallMultiples.spacing));
+        settings.smallMultiples.titleSpacing = Math.max(10, Math.min(120, settings.smallMultiples.titleSpacing));
     }
 
     return settings;

@@ -23,6 +23,12 @@
       "name": "legend",
       "kind": "Grouping",
       "description": "Field used to color the series"
+    },
+    {
+      "displayName": "Group",
+      "name": "group",
+      "kind": "Grouping",
+      "description": "Splits the chart into small multiples (one panel per group)"
     }
   ],
   "tooltips": {
@@ -177,6 +183,26 @@
           "displayName": "Font Size",
           "type": { "formatting": { "fontSize": true } }
         },
+        "fontFamily": {
+          "displayName": "Font Family",
+          "type": { "text": true }
+        },
+        "color": {
+          "displayName": "Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "bold": {
+          "displayName": "Bold",
+          "type": { "bool": true }
+        },
+        "italic": {
+          "displayName": "Italic",
+          "type": { "bool": true }
+        },
+        "underline": {
+          "displayName": "Underline",
+          "type": { "bool": true }
+        },
         "rotateLabels": {
           "displayName": "Rotate Labels",
           "description": "Control X-axis label rotation",
@@ -200,6 +226,26 @@
         "fontSize": {
           "displayName": "Font Size",
           "type": { "formatting": { "fontSize": true } }
+        },
+        "fontFamily": {
+          "displayName": "Font Family",
+          "type": { "text": true }
+        },
+        "color": {
+          "displayName": "Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "bold": {
+          "displayName": "Bold",
+          "type": { "bool": true }
+        },
+        "italic": {
+          "displayName": "Italic",
+          "type": { "bool": true }
+        },
+        "underline": {
+          "displayName": "Underline",
+          "type": { "bool": true }
         }
       }
     },
@@ -250,6 +296,27 @@
           "type": { "formatting": { "fontSize": true } }
         }
       }
+    },
+    "smallMultiples": {
+      "displayName": "Small Multiples",
+      "properties": {
+        "spacing": {
+          "displayName": "Panel Spacing",
+          "type": { "numeric": true }
+        },
+        "showTitle": {
+          "displayName": "Show Panel Titles",
+          "type": { "bool": true }
+        },
+        "titleFontSize": {
+          "displayName": "Title Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "titleSpacing": {
+          "displayName": "Title Spacing",
+          "type": { "numeric": true }
+        }
+      }
     }
   },
   "dataViewMappings": [
@@ -259,7 +326,8 @@
           "xAxis": { "max": 1 },
           "yAxis": { "max": 1 },
           "values": { "max": 1 },
-          "legend": { "max": 1 }
+          "legend": { "max": 1 },
+          "group": { "max": 0 }
         }
       ],
       "categorical": {
@@ -277,6 +345,37 @@
           "select": [
             { "for": { "in": "values" } }
           ]
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "xAxis": { "max": 1 },
+          "yAxis": { "max": 1 },
+          "values": { "max": 1 },
+          "legend": { "max": 1 },
+          "group": { "min": 1, "max": 1 }
+        }
+      ],
+      "categorical": {
+        "categories": {
+          "select": [
+            { "for": { "in": "xAxis" } },
+            { "for": { "in": "yAxis" } },
+            { "for": { "in": "legend" } }
+          ],
+          "dataReductionAlgorithm": {
+            "top": { "count": 30000 }
+          }
+        },
+        "values": {
+          "group": {
+            "by": "group",
+            "select": [
+              { "for": { "in": "values" } }
+            ]
+          }
         }
       }
     }

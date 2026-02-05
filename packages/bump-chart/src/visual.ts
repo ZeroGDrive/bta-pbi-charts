@@ -15,6 +15,7 @@ import {
     RenderContext,
     createTooltipCard,
     createTextSizesCard,
+    createSmallMultiplesCard,
     readCategoryColorsFromDataView,
     findCategoryIndex,
     getSchemeColors,
@@ -165,7 +166,8 @@ export class Visual implements IVisual {
                 "X-Axis: Date / Period",
                 "Y-Axis: Category (ranked)",
                 "Values: Measure (used for ranking)",
-                "Legend (optional): Color by field"
+                "Legend (optional): Color by field",
+                "Group (optional): Split into panels"
             ],
             hint: "Tip: Use the Format pane to adjust label sizes, colors, and legend layout."
         });
@@ -283,6 +285,61 @@ export class Visual implements IVisual {
                                 value: this.settings.yAxisFontSize
                             }
                         }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "yAxis_fontFamily",
+                        displayName: "Font Family",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.FontPicker,
+                            properties: {
+                                descriptor: { objectName: "yAxisSettings", propertyName: "fontFamily" },
+                                value: this.settings.yAxisFontFamily
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "yAxis_color",
+                        displayName: "Color",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ColorPicker,
+                            properties: {
+                                descriptor: { objectName: "yAxisSettings", propertyName: "color" },
+                                value: { value: this.settings.yAxisColor }
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "yAxis_bold",
+                        displayName: "Bold",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "yAxisSettings", propertyName: "bold" },
+                                value: this.settings.yAxisBold
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "yAxis_italic",
+                        displayName: "Italic",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "yAxisSettings", propertyName: "italic" },
+                                value: this.settings.yAxisItalic
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "yAxis_underline",
+                        displayName: "Underline",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "yAxisSettings", propertyName: "underline" },
+                                value: this.settings.yAxisUnderline
+                            }
+                        }
                     } as powerbi.visuals.FormattingSlice
                 ]
             }]
@@ -315,6 +372,61 @@ export class Visual implements IVisual {
                             properties: {
                                 descriptor: { objectName: "xAxisSettings", propertyName: "fontSize" },
                                 value: this.settings.xAxisFontSize
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "xAxis_fontFamily",
+                        displayName: "Font Family",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.FontPicker,
+                            properties: {
+                                descriptor: { objectName: "xAxisSettings", propertyName: "fontFamily" },
+                                value: this.settings.xAxisFontFamily
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "xAxis_color",
+                        displayName: "Color",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ColorPicker,
+                            properties: {
+                                descriptor: { objectName: "xAxisSettings", propertyName: "color" },
+                                value: { value: this.settings.xAxisColor }
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "xAxis_bold",
+                        displayName: "Bold",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "xAxisSettings", propertyName: "bold" },
+                                value: this.settings.xAxisBold
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "xAxis_italic",
+                        displayName: "Italic",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "xAxisSettings", propertyName: "italic" },
+                                value: this.settings.xAxisItalic
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "xAxis_underline",
+                        displayName: "Underline",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "xAxisSettings", propertyName: "underline" },
+                                value: this.settings.xAxisUnderline
                             }
                         }
                     } as powerbi.visuals.FormattingSlice
@@ -382,6 +494,12 @@ export class Visual implements IVisual {
             legendFontSize: this.settings.textSizes.legendFontSize || this.settings.legendFontSize,
             panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize,
             endLabelFontSize: this.settings.textSizes.endLabelFontSize || this.settings.yAxisFontSize
+        }));
+
+        cards.push(createSmallMultiplesCard({
+            spacing: this.settings.smallMultiples.spacing,
+            showTitle: this.settings.smallMultiples.showTitle,
+            titleSpacing: this.settings.smallMultiples.titleSpacing
         }));
 
         // Bump Chart card

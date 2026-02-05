@@ -11,6 +11,7 @@ export interface LabelRotationConfig {
     labels: string[];
     availableWidth: number;
     fontSize: number;
+    fontFamily?: string;
     rotationAngle?: number;  // Default: 45 degrees
 }
 
@@ -94,7 +95,7 @@ export function measureMaxLabelWidth(labels: string[], fontSize: number, fontFam
  * Calculate if rotation is needed and what skip interval to use based on actual collision detection
  */
 export function calculateLabelRotation(config: LabelRotationConfig): LabelRotationResult {
-    const { mode, labels, availableWidth, fontSize, rotationAngle = 45 } = config;
+    const { mode, labels, availableWidth, fontSize, fontFamily, rotationAngle = 45 } = config;
 
     // Handle edge cases
     if (labels.length === 0) {
@@ -110,7 +111,7 @@ export function calculateLabelRotation(config: LabelRotationConfig): LabelRotati
     }
 
     const padding = 4; // Minimum padding between labels
-    const maxWidth = measureMaxLabelWidth(labels, fontSize);
+    const maxWidth = measureMaxLabelWidth(labels, fontSize, fontFamily);
     const angleRad = (rotationAngle * Math.PI) / 180;
     const rotatedWidth = maxWidth * Math.cos(angleRad) + fontSize * Math.sin(angleRad);
 

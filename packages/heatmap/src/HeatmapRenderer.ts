@@ -63,11 +63,22 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
 
         const legendReserve = { top: 0, right: 0, bottom: 0, left: 0 };
 
+        const titleSpacing = settings.smallMultiples.titleSpacing || 25;
+        const panelTitleFontSize = this.getEffectiveFontSize(
+            settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
+            6, 40
+        );
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
+        const interPanelGap = groups.length > 1
+            ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
+            : 0;
+
         const xAxisLineHeight = Math.max(10, Math.round(xAxisFontSize * 1.15));
         const xAxisHierarchyHeight = settings.showXAxis ? (xAxis.depth * xAxisLineHeight + 18) : 0;
 
         const margin = {
-            top: 12 + legendReserve.top + settings.heatmap.marginTop,
+            top: 12 + legendReserve.top + settings.heatmap.marginTop + titleReserve,
             right: 12 + legendReserve.right + settings.heatmap.marginRight,
             bottom: 12 + legendReserve.bottom + xAxisHierarchyHeight + settings.heatmap.marginBottom,
             left: 12 + legendReserve.left + settings.heatmap.marginLeft
@@ -75,7 +86,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
 
         const chartWidth = this.context.width - margin.left - margin.right;
         const groupCount = groups.length;
-        const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
+        const totalSpacing = (groupCount - 1) * interPanelGap;
         const availableHeight = this.context.height - margin.top - margin.bottom - totalSpacing;
 
         // Use custom min/max colors from settings
@@ -254,7 +265,11 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                             .attr("dy", "0.35em")
                             .attr("text-anchor", "start")
                             .attr("font-size", `${yAxisFontSize}px`)
-                            .attr("fill", "#333")
+                            .attr("font-family", settings.yAxisFontFamily)
+                            .style("font-weight", settings.yAxisBold ? "700" : "400")
+                            .style("font-style", settings.yAxisItalic ? "italic" : "normal")
+                            .style("text-decoration", settings.yAxisUnderline ? "underline" : "none")
+                            .attr("fill", settings.yAxisColor)
                             .text(textValue);
 
                         if (textValue !== span.label) {
@@ -275,7 +290,8 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                     mode: settings.rotateXLabels,
                     labels: leafLabels,
                     availableWidth: gridActualWidth,
-                    fontSize: xAxisFontSize
+                    fontSize: xAxisFontSize,
+                    fontFamily: settings.xAxisFontFamily
                 });
                 const shouldRotate = rotationResult.shouldRotate;
                 const skipInterval = rotationResult.skipInterval;
@@ -308,7 +324,11 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                             .attr("dy", "0.8em")
                             .attr("text-anchor", "middle")
                             .attr("font-size", `${xAxisFontSize}px`)
-                            .attr("fill", "#666")
+                            .attr("font-family", settings.xAxisFontFamily)
+                            .style("font-weight", settings.xAxisBold ? "700" : "400")
+                            .style("font-style", settings.xAxisItalic ? "italic" : "normal")
+                            .style("text-decoration", settings.xAxisUnderline ? "underline" : "none")
+                            .attr("fill", settings.xAxisColor)
                             .text(displayText);
 
                         if (displayText !== span.label) {
@@ -322,7 +342,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                 }
             }
 
-            currentY += groupHeight + settings.smallMultiples.spacing;
+            currentY += groupHeight + interPanelGap;
         });
 
         // Heatmap has no legend by design (tooltips carry the details).

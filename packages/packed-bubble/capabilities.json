@@ -7,6 +7,12 @@
       "description": "Category for bubble grouping"
     },
     {
+      "displayName": "Group",
+      "name": "group",
+      "kind": "Grouping",
+      "description": "Splits the bubbles into small multiples (one panel per group)"
+    },
+    {
       "displayName": "Values",
       "name": "values",
       "kind": "Measure",
@@ -220,6 +226,27 @@
           "type": { "formatting": { "fontSize": true } }
         }
       }
+    },
+    "smallMultiples": {
+      "displayName": "Small Multiples",
+      "properties": {
+        "spacing": {
+          "displayName": "Panel Spacing",
+          "type": { "numeric": true }
+        },
+        "showTitle": {
+          "displayName": "Show Panel Titles",
+          "type": { "bool": true }
+        },
+        "titleFontSize": {
+          "displayName": "Title Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "titleSpacing": {
+          "displayName": "Title Spacing",
+          "type": { "numeric": true }
+        }
+      }
     }
   },
   "dataViewMappings": [
@@ -227,6 +254,7 @@
       "conditions": [
         {
           "yAxis": { "max": 1 },
+          "group": { "max": 0 },
           "values": { "max": 1 },
           "legend": { "max": 1 }
         }
@@ -245,6 +273,35 @@
           "select": [
             { "for": { "in": "values" } }
           ]
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "yAxis": { "max": 1 },
+          "group": { "min": 1, "max": 1 },
+          "values": { "max": 1 },
+          "legend": { "max": 1 }
+        }
+      ],
+      "categorical": {
+        "categories": {
+          "select": [
+            { "for": { "in": "yAxis" } },
+            { "for": { "in": "legend" } }
+          ],
+          "dataReductionAlgorithm": {
+            "top": { "count": 30000 }
+          }
+        },
+        "values": {
+          "group": {
+            "by": "group",
+            "select": [
+              { "for": { "in": "values" } }
+            ]
+          }
         }
       }
     }

@@ -41,8 +41,18 @@ export interface ICustomColorSettings {
 export interface IAxisSettings {
     showXAxis: boolean;
     xAxisFontSize: number;
+    xAxisFontFamily: string;
+    xAxisBold: boolean;
+    xAxisItalic: boolean;
+    xAxisUnderline: boolean;
+    xAxisColor: string;
     showYAxis: boolean;
     yAxisFontSize: number;
+    yAxisFontFamily: string;
+    yAxisBold: boolean;
+    yAxisItalic: boolean;
+    yAxisUnderline: boolean;
+    yAxisColor: string;
     rotateXLabels: RotateLabelsMode;  // Control X-axis label rotation
 }
 
@@ -118,7 +128,7 @@ export const colorSchemes: Record<ColorScheme, { min: string; max: string }> = {
 // Default small multiples settings
 export const defaultSmallMultiplesSettings: ISmallMultiplesSettings = {
     columns: 2,
-    spacing: 30,
+    spacing: 36,
     showTitle: true,
     titleFontSize: 14,
     titleSpacing: 25  // NEW

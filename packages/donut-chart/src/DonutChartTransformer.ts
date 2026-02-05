@@ -2,7 +2,7 @@
 
 import powerbi from "powerbi-visuals-api";
 import DataViewCategorical = powerbi.DataViewCategorical;
-import { ChartData, DataPoint } from "@pbi-visuals/shared";
+import { ChartData, DataPoint, formatGroupValue } from "@pbi-visuals/shared";
 
 export interface DonutChartData extends ChartData {
     segmentsByGroup: Map<string, Array<{ category: string; value: number }>>;
@@ -31,22 +31,40 @@ export class DonutChartTransformer {
             });
         }
 
-        const values = categorical.values?.[0]?.values || [];
-        const valueFormatString = (categorical.values?.[0]?.source as any)?.format as string | undefined;
+        const groupedValues = (categorical.values as any)?.grouped?.() as Array<any> | undefined;
+        const valueGroups: Array<{ groupValue: string; values: any[] }> = [];
 
-        for (let i = 0; i < values.length; i++) {
-            const category = legendIndex >= 0
-                ? String(categorical.categories![legendIndex].values[i] ?? "")
-                : "All";
-            const groupValue = "All";
-            const value = Number(values[i]) || 0;
+        if (groupedValues && groupedValues.length > 0) {
+            for (const g of groupedValues) {
+                const groupValue = formatGroupValue(g?.name);
+                const groupValues = (g?.values?.[0]?.values as any[]) ?? [];
+                valueGroups.push({ groupValue, values: groupValues });
+            }
+        } else {
+            valueGroups.push({ groupValue: "All", values: (categorical.values?.[0]?.values as any[]) ?? [] });
+        }
 
-            categoriesSet.add(category);
+        const valueFormatString =
+            (groupedValues?.[0]?.values?.[0]?.source as any)?.format as string | undefined
+            ?? (categorical.values?.[0]?.source as any)?.format as string | undefined;
+
+        for (const vg of valueGroups) {
+            const groupValue = vg.groupValue;
+            const values = vg.values ?? [];
             groupsSet.add(groupValue);
 
-            const groupMap = segmentsByGroup.get(groupValue) ?? new Map<string, number>();
-            groupMap.set(category, (groupMap.get(category) ?? 0) + value);
-            segmentsByGroup.set(groupValue, groupMap);
+            for (let i = 0; i < values.length; i++) {
+                const category = legendIndex >= 0
+                    ? String(categorical.categories![legendIndex].values[i] ?? "")
+                    : "All";
+                const value = Number(values[i]) || 0;
+
+                categoriesSet.add(category);
+
+                const groupMap = segmentsByGroup.get(groupValue) ?? new Map<string, number>();
+                groupMap.set(category, (groupMap.get(category) ?? 0) + value);
+                segmentsByGroup.set(groupValue, groupMap);
+            }
         }
 
         const categories = Array.from(categoriesSet).sort();
