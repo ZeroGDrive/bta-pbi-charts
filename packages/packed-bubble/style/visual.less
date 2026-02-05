@@ -9,6 +9,22 @@
         text-rendering: geometricPrecision;
     }
 
+    // Crisp rendering for straight lines
+    svg {
+        shape-rendering: crispEdges;
+    }
+
+    // Smooth rendering for circles (bubbles)
+    .bubble,
+    circle {
+        shape-rendering: geometricPrecision;
+    }
+
+    // Crisp rectangles (legend boxes)
+    rect {
+        shape-rendering: crispEdges;
+    }
+
     .chart-container {
         overflow: visible;
     }
@@ -27,10 +43,8 @@
     .bubble {
         cursor: pointer;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 
         &:hover {
-            filter: brightness(0.9) saturate(1.15) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
             stroke-width: 3;
         }
     }
@@ -40,7 +54,6 @@
         pointer-events: none;
         font-weight: 600;
         letter-spacing: 0;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     }
 
     // Professional legend styling

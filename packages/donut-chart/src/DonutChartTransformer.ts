@@ -7,6 +7,7 @@ import { ChartData, DataPoint } from "@pbi-visuals/shared";
 export interface DonutChartData extends ChartData {
     segmentsByGroup: Map<string, Array<{ category: string; value: number }>>;
     totalsByGroup: Map<string, number>;
+    hasLegendRoleData: boolean;
 }
 
 export class DonutChartTransformer {
@@ -19,28 +20,25 @@ export class DonutChartTransformer {
         let maxValue = 0;
         let minValue = Infinity;
 
-        let categoryIndex = -1;
-        let groupByIndex = -1;
+        let legendIndex = -1;
 
         if (categorical.categories) {
             categorical.categories.forEach((cat, idx) => {
                 const role = cat.source.roles;
                 if (role) {
-                    if (role["category"]) categoryIndex = idx;
-                    if (role["groupBy"]) groupByIndex = idx;
+                    if (role["legend"]) legendIndex = idx;
                 }
             });
         }
 
         const values = categorical.values?.[0]?.values || [];
+        const valueFormatString = (categorical.values?.[0]?.source as any)?.format as string | undefined;
 
         for (let i = 0; i < values.length; i++) {
-            const category = categoryIndex >= 0
-                ? String(categorical.categories![categoryIndex].values[i] ?? "")
+            const category = legendIndex >= 0
+                ? String(categorical.categories![legendIndex].values[i] ?? "")
                 : "All";
-            const groupValue = groupByIndex >= 0
-                ? String(categorical.categories![groupByIndex].values[i] ?? "")
-                : "All";
+            const groupValue = "All";
             const value = Number(values[i]) || 0;
 
             categoriesSet.add(category);
@@ -96,8 +94,9 @@ export class DonutChartTransformer {
             maxValue,
             minValue,
             segmentsByGroup: segmentsOut,
-            totalsByGroup
+            totalsByGroup,
+            hasLegendRoleData: legendIndex >= 0,
+            valueFormatString
         };
     }
 }
-

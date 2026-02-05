@@ -6,7 +6,8 @@ import {
     RenderContext,
     ChartData,
     formatLabel,
-    measureTextWidth
+    measureTextWidth,
+    formatMeasureValue
 } from "@pbi-visuals/shared";
 import { IDonutVisualSettings } from "./settings";
 import { DonutChartData } from "./DonutChartTransformer";
@@ -21,6 +22,8 @@ type OutsideLabelCandidate = {
 };
 
 export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
+    private valueFormatString?: string;
+
     constructor(context: RenderContext) {
         super(context);
     }
@@ -28,6 +31,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
     public render(data: ChartData, settings: IDonutVisualSettings): void {
         this.settings = settings;
         const donutData = data as DonutChartData;
+        this.valueFormatString = donutData.valueFormatString;
 
         if (!donutData.groups?.length || !donutData.xValues?.length) {
             this.renderNoData();
@@ -38,11 +42,16 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
         const categories = donutData.xValues;
         const groupCount = groups.length;
 
+        const showLegend = donutData.hasLegendRoleData;
+        const legendReserve = showLegend
+            ? this.getLegendReservation({ isOrdinal: true, categories })
+            : { top: 0, right: 0, bottom: 0, left: 0 };
+
         const margin = {
-            top: 40,
-            right: 20,
-            bottom: settings.showLegend ? 70 : 20,
-            left: 20
+            top: 12 + legendReserve.top,
+            right: 12 + legendReserve.right,
+            bottom: 12 + legendReserve.bottom,
+            left: 12 + legendReserve.left
         };
 
         const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
@@ -54,9 +63,21 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
         }
 
         const colorScale = this.getCategoryColors(categories, donutData.categoryColorMap);
-        const sliceFontSize = this.getEffectiveFontSize(settings.textSizes.sliceLabelFontSize, 12, 9, 16);
-        const centerLabelFontSize = this.getEffectiveFontSize(settings.textSizes.centerLabelFontSize, 11, 9, 16);
-        const centerValueFontSize = this.getEffectiveFontSize(settings.textSizes.centerValueFontSize, 18, 10, 32);
+        const sliceFontSize = this.getEffectiveFontSize(
+            settings.textSizes.sliceLabelFontSize > 0 ? settings.textSizes.sliceLabelFontSize : 11,
+            6,
+            40
+        );
+        const centerLabelFontSize = this.getEffectiveFontSize(
+            settings.textSizes.centerLabelFontSize > 0 ? settings.textSizes.centerLabelFontSize : 11,
+            6,
+            40
+        );
+        const centerValueFontSize = this.getEffectiveFontSize(
+            settings.textSizes.centerValueFontSize > 0 ? settings.textSizes.centerValueFontSize : 20,
+            6,
+            120
+        );
 
         let currentY = margin.top;
 
@@ -69,11 +90,9 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
             // Group title
             if (settings.smallMultiples.showTitle && groupName !== "All") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
-                const titleFontSize = this.getEffectiveFontSize(
-                    settings.textSizes.panelTitleFontSize,
-                    settings.smallMultiples.titleFontSize,
-                    10, 24
-                );
+                const titleBase = settings.smallMultiples.titleFontSize;
+                const titleRequested = settings.textSizes.panelTitleFontSize > 0 ? settings.textSizes.panelTitleFontSize : titleBase;
+                const titleFontSize = this.getEffectiveFontSize(titleRequested, 6, 40);
                 const displayTitle = formatLabel(groupName, chartWidth, titleFontSize);
                 const title = panelGroup.append("text")
                     .attr("class", "panel-title")
@@ -102,14 +121,14 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
             const total = donutData.totalsByGroup.get(groupName) ?? d3.sum(segments, d => d.value);
 
             // If nothing to show in this panel, render a subtle empty note.
-            if (!segments.length || total <= 0) {
-                panelGroup.append("text")
-                    .attr("x", centerX)
-                    .attr("y", centerY)
-                    .attr("text-anchor", "middle")
-                    .attr("font-size", "12px")
-                    .attr("fill", "#9ca3af")
-                    .text("No data");
+                if (!segments.length || total <= 0) {
+                    panelGroup.append("text")
+                        .attr("x", centerX)
+                        .attr("y", centerY)
+                        .attr("text-anchor", "middle")
+                        .attr("font-size", `${sliceFontSize}px`)
+                        .attr("fill", "#9ca3af")
+                        .text("No data");
 
                 currentY += groupHeight + settings.smallMultiples.spacing;
                 return;
@@ -156,7 +175,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
                 const color = colorScale(d.data.category);
                 const percent = total > 0 ? (d.data.value / total) : 0;
                 const tooltipData = [
-                    { displayName: "Value", value: d.data.value.toLocaleString() },
+                    { displayName: "Value", value: formatMeasureValue(d.data.value, this.valueFormatString) },
                     { displayName: "Percent", value: `${(percent * 100).toFixed(1)}%` },
                     ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
                 ];
@@ -504,7 +523,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
                         .attr("text-anchor", "middle")
                         .attr("y", centerValueFontSize * 0.9)
                         .attr("font-size", `${centerValueFontSize}px`)
-                        .text(total.toLocaleString());
+                        .text(formatMeasureValue(total, this.valueFormatString));
                 }
             }
 
@@ -512,8 +531,15 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
         });
 
         // Legend (categorical)
-        if (settings.showLegend) {
-            this.renderLegend(colorScale, donutData.maxValue, true, categories);
+        if (showLegend) {
+            this.renderLegend(colorScale, donutData.maxValue, true, categories, undefined, undefined, {
+                alignFrame: {
+                    x: margin.left,
+                    y: margin.top,
+                    width: chartWidth,
+                    height: Math.max(0, this.context.height - margin.top - margin.bottom)
+                }
+            });
         }
     }
 
@@ -523,7 +549,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
             case "category":
                 return d.data.category;
             case "value":
-                return d.data.value.toLocaleString();
+                return formatMeasureValue(d.data.value, this.valueFormatString);
             case "percent":
                 return `${Math.round(percent * 100)}%`;
             case "categoryPercent":

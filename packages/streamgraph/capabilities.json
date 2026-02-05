@@ -23,12 +23,6 @@
       "name": "legend",
       "kind": "Grouping",
       "description": "Field used to color the series"
-    },
-    {
-      "displayName": "Group By",
-      "name": "groupBy",
-      "kind": "Grouping",
-      "description": "Field used to split into separate panels (small multiples)"
     }
   ],
   "tooltips": {
@@ -45,21 +39,6 @@
         "fill": {
           "displayName": "Color",
           "type": { "fill": { "solid": { "color": true } } }
-        }
-      }
-    },
-    "general": {
-      "displayName": "General",
-      "properties": {
-        "responsiveText": {
-          "displayName": "Responsive Text",
-          "description": "Scale text size based on chart dimensions",
-          "type": { "bool": true }
-        },
-        "fontScaleFactor": {
-          "displayName": "Font Scale Factor",
-          "description": "Adjust font size scaling (0.5 = smaller, 2.0 = larger)",
-          "type": { "numeric": true }
         }
       }
     },
@@ -159,16 +138,20 @@
     "legend": {
       "displayName": "Legend",
       "properties": {
-        "show": {
-          "displayName": "Show Legend",
-          "type": { "bool": true }
-        },
         "position": {
           "displayName": "Position",
           "type": {
             "enumeration": [
-              { "value": "right", "displayName": "Right" },
-              { "value": "bottom", "displayName": "Bottom" }
+              { "value": "topLeft", "displayName": "Top Left" },
+              { "value": "topCenter", "displayName": "Top Center" },
+              { "value": "topRight", "displayName": "Top Right" },
+              { "value": "topLeftStacked", "displayName": "Top Left (Stacked)" },
+              { "value": "topRightStacked", "displayName": "Top Right (Stacked)" },
+              { "value": "centerLeft", "displayName": "Center Left" },
+              { "value": "centerRight", "displayName": "Center Right" },
+              { "value": "bottomLeft", "displayName": "Bottom Left" },
+              { "value": "bottomCenter", "displayName": "Bottom Center" },
+              { "value": "bottomRight", "displayName": "Bottom Right" }
             ]
           }
         },
@@ -258,32 +241,6 @@
           "type": { "formatting": { "fontSize": true } }
         }
       }
-    },
-    "smallMultiples": {
-      "displayName": "Small Multiples",
-      "properties": {
-        "columns": {
-          "displayName": "Columns",
-          "type": { "numeric": true }
-        },
-        "spacing": {
-          "displayName": "Spacing",
-          "type": { "numeric": true }
-        },
-        "showTitle": {
-          "displayName": "Show Panel Titles",
-          "type": { "bool": true }
-        },
-        "titleFontSize": {
-          "displayName": "Title Font Size",
-          "type": { "formatting": { "fontSize": true } }
-        },
-        "titleSpacing": {
-          "displayName": "Title Spacing",
-          "description": "Gap between title and content",
-          "type": { "numeric": true }
-        }
-      }
     }
   },
   "dataViewMappings": [
@@ -293,8 +250,7 @@
           "xAxis": { "max": 1 },
           "yAxis": { "max": 1 },
           "values": { "max": 1 },
-          "legend": { "max": 1 },
-          "groupBy": { "max": 1 }
+          "legend": { "max": 1 }
         }
       ],
       "categorical": {
@@ -302,8 +258,7 @@
           "select": [
             { "for": { "in": "xAxis" } },
             { "for": { "in": "yAxis" } },
-            { "for": { "in": "legend" } },
-            { "for": { "in": "groupBy" } }
+            { "for": { "in": "legend" } }
           ],
           "dataReductionAlgorithm": {
             "top": { "count": 30000 }

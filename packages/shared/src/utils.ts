@@ -1,5 +1,7 @@
 "use strict";
 
+import { valueFormatter } from "powerbi-visuals-utils-formattingutils";
+
 /**
  * Formats a data value for display, handling null/undefined values
  */
@@ -8,6 +10,29 @@ export function formatDataValue(value: any, index: number): string {
         return `Point ${index}`;
     }
     return String(value);
+}
+
+export function formatMeasureValue(
+    value: number | null | undefined,
+    formatString?: string,
+    fallback?: Intl.NumberFormatOptions
+): string {
+    if (value === null || value === undefined) {
+        return "(Blank)";
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+        return "N/A";
+    }
+    if (formatString && typeof formatString === "string" && formatString.trim()) {
+        try {
+            return valueFormatter.format(n, formatString);
+        } catch {
+            // ignore and fall back
+        }
+    }
+    const opts: Intl.NumberFormatOptions = fallback ?? {};
+    return n.toLocaleString(undefined, opts);
 }
 
 /**

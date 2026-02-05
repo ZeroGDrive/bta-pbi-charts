@@ -9,6 +9,16 @@
         text-rendering: geometricPrecision;
     }
 
+    // Crisp rendering for straight lines
+    svg {
+        shape-rendering: crispEdges;
+    }
+
+    // Crisp rectangles (calendar cells, legend boxes)
+    rect {
+        shape-rendering: crispEdges;
+    }
+
     .chart-container {
         overflow: visible;
     }

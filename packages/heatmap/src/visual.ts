@@ -14,10 +14,7 @@ import {
     RenderContext,
     createColorSchemeCard,
     createGradientColorsCard,
-    createGeneralCard,
     createHeatmapSettingsCard,
-    createLegendCard,
-    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     createXAxisCard,
@@ -71,6 +68,12 @@ export class Visual implements IVisual {
 
         this.svg.attr("width", width).attr("height", height);
 
+        // Hide tooltip when mouse leaves the chart entirely
+        this.svg.on("mouseleave", () => {
+            this.htmlTooltip?.hide();
+            this.host.tooltipService.hide({ immediately: true, isTouchEvent: false });
+        });
+
         // Validate data
         if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].matrix) {
             this.renderNoData(width, height);
@@ -116,8 +119,7 @@ export class Visual implements IVisual {
             lines: [
                 "X-Axis: Column hierarchy (up to 5 levels)",
                 "Y-Axis: Row hierarchy (up to 5 levels)",
-                "Values: Measure (cell intensity)",
-                "Group By (optional): Small multiples panels"
+                "Values: Measure (cell intensity)"
             ],
             hint: "Tip: Turn on Value Labels if you want numbers inside cells."
         });
@@ -149,11 +151,6 @@ export class Visual implements IVisual {
             return { cards };
         }
 
-        cards.push(createGeneralCard({
-            responsiveText: this.settings.responsiveText,
-            fontScaleFactor: this.settings.fontScaleFactor
-        }));
-
         cards.push(createTooltipCard(this.settings.tooltip));
 
         cards.push(createColorSchemeCard(this.settings.colorScheme));
@@ -164,13 +161,6 @@ export class Visual implements IVisual {
             this.settings.heatmap.maxColor,
             "heatmapSettings"
         ));
-
-        cards.push(createLegendCard({
-            show: this.settings.showLegend,
-            position: this.settings.legendPosition,
-            fontSize: this.settings.legendFontSize,
-            maxItems: this.settings.maxLegendItems
-        }));
 
         cards.push(createYAxisCard({
             show: this.settings.showYAxis,
@@ -183,11 +173,14 @@ export class Visual implements IVisual {
             rotateLabels: this.settings.rotateXLabels
         }));
 
-        cards.push(createTextSizesCard(this.settings.textSizes));
+        cards.push(createTextSizesCard({
+            xAxisFontSize: this.settings.textSizes.xAxisFontSize || this.settings.xAxisFontSize,
+            yAxisFontSize: this.settings.textSizes.yAxisFontSize || this.settings.yAxisFontSize,
+            panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize,
+            valueLabelFontSize: this.settings.textSizes.valueLabelFontSize || 10
+        }));
 
         cards.push(createHeatmapSettingsCard(this.settings.heatmap));
-
-        cards.push(createSmallMultiplesCard(this.settings.smallMultiples));
 
         return { cards };
     }

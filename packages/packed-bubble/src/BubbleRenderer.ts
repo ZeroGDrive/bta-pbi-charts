@@ -1,7 +1,7 @@
 "use strict";
 
 import * as d3 from "d3";
-import { BaseRenderer, RenderContext, formatLabel } from "@pbi-visuals/shared";
+import { BaseRenderer, RenderContext, formatLabel, formatMeasureValue } from "@pbi-visuals/shared";
 import { IBubbleVisualSettings } from "./settings";
 import { BubbleData, BubbleNode } from "./BubbleTransformer";
 
@@ -26,13 +26,16 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
             return;
         }
 
-        const { nodes, categories, groups, maxValue, minValue } = bubbleData;
+        const { nodes, categories, legendItems, groups, maxValue, minValue } = bubbleData;
+
+        const legendCategories = bubbleData.hasLegendRoleData ? legendItems : [];
+        const legendReserve = this.getLegendReservation({ isOrdinal: true, categories: legendCategories });
 
         const margin = {
-            top: 40,
-            right: 20,
-            bottom: settings.showLegend ? 60 : 20,
-            left: 20
+            top: 12 + legendReserve.top,
+            right: 12 + legendReserve.right,
+            bottom: 12 + legendReserve.bottom,
+            left: 12 + legendReserve.left
         };
 
         const chartWidth = this.context.width - margin.left - margin.right;
@@ -40,8 +43,11 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
         const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
         const availableHeight = this.context.height - margin.top - margin.bottom - totalSpacing;
 
-        // Color scale for categories
-        const colorScale = this.getCategoryColors(categories, bubbleData.categoryColorMap);
+        // Color scale for legend groups. If no legend role is bound, keep a single crisp color (native-like).
+        const colorScale = bubbleData.hasLegendRoleData
+            ? this.getCategoryColors(legendItems, bubbleData.categoryColorMap)
+            : null;
+        const fallbackColor = this.getCategoryColor(0);
 
         // Radius scale based on values
         const radiusScale = d3.scaleSqrt()
@@ -72,9 +78,8 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
             if (settings.smallMultiples.showTitle && groupName !== "All") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleFontSize = this.getEffectiveFontSize(
-                    settings.textSizes.panelTitleFontSize,
-                    settings.smallMultiples.titleFontSize,
-                    10, 24
+                    settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
+                    6, 40
                 );
                 const displayTitle = formatLabel(groupName, chartWidth, titleFontSize);
                 const title = panelGroup.append("text")
@@ -152,7 +157,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
                 .attr("cx", d => d.x)
                 .attr("cy", d => d.y)
                 .attr("r", d => d.radius)
-                .attr("fill", d => colorScale(d.category))
+                .attr("fill", d => (colorScale ? colorScale(d.legendKey) : fallbackColor))
                 .attr("stroke", "#fff")
                 .attr("stroke-width", 2)
                 .attr("opacity", 0.85);
@@ -161,29 +166,26 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
             bubbles.each((d, i, nodes) => {
                 const bubble = d3.select(nodes[i]);
                 this.addTooltip(bubble as any, [
-                    { displayName: "Value", value: d.value.toLocaleString() }
+                    { displayName: "Value", value: formatMeasureValue(d.value, bubbleData.valueFormatString) }
                 ], {
                     title: d.category,
                     subtitle: groupName !== "All" ? groupName : undefined,
-                    color: colorScale(d.category)
+                    color: colorScale ? colorScale(d.legendKey) : fallbackColor
                 });
             });
 
             // Draw labels inside bubbles (if enabled and bubble is large enough)
             if (settings.bubble.showLabels) {
-                // Get user font scale factor (default 1.0)
-                const userScaleFactor = settings.fontScaleFactor ?? 1.0;
-
                 // Helper function to get font size based on settings
                 const getFontSize = (radius: number): number => {
                     if (settings.bubble.labelSizeMode === "fixed") {
-                        return Math.round(settings.bubble.labelFontSize * userScaleFactor);
+                        return Math.round(settings.bubble.labelFontSize);
                     }
-                    // Auto mode - scale with bubble size and user scale factor
-                    const computed = (radius / 3) * userScaleFactor;
+                    // Auto mode - scale with bubble size
+                    const computed = radius / 3;
                     return Math.max(
                         settings.bubble.minLabelFontSize,
-                        Math.min(settings.bubble.maxLabelFontSize * userScaleFactor, computed)
+                        Math.min(settings.bubble.maxLabelFontSize, computed)
                     );
                 };
 
@@ -198,7 +200,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
                     .attr("text-anchor", "middle")
                     .attr("font-size", d => getFontSize(d.radius) + "px")
                     .attr("font-weight", "600")
-                    .attr("fill", d => this.getContrastColor(colorScale(d.category)))
+                    .attr("fill", d => this.getContrastColor(colorScale ? colorScale(d.legendKey) : fallbackColor))
                     .attr("pointer-events", "none")
                     .text(d => this.truncateLabel(d.category, d.radius, getFontSize(d.radius)));
             }
@@ -207,8 +209,17 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
         });
 
         // Categorical legend - use same color scale with overrides
-        const legendColorScale = this.getCategoryColors(categories, bubbleData.categoryColorMap);
-        this.renderLegend(legendColorScale, maxValue, true, categories);
+        if (bubbleData.hasLegendRoleData) {
+            const legendColorScale = this.getCategoryColors(legendItems, bubbleData.categoryColorMap);
+            this.renderLegend(legendColorScale, maxValue, true, legendItems, undefined, undefined, {
+                alignFrame: {
+                    x: margin.left,
+                    y: margin.top,
+                    width: chartWidth,
+                    height: Math.max(0, this.context.height - margin.top - margin.bottom)
+                }
+            });
+        }
     }
 
     private truncateLabel(text: string, radius: number, fontSize: number = 12): string {

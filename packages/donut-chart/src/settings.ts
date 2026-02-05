@@ -9,7 +9,6 @@ import {
     defaultSmallMultiplesSettings,
     defaultLegendSettings,
     defaultCustomColorSettings,
-    defaultFontScaleFactor,
     defaultTooltipSettings,
     TooltipStyle,
     TooltipTheme
@@ -57,8 +56,7 @@ export interface IDonutVisualSettings extends IBaseVisualSettings {
 
 export const defaultSettings: IDonutVisualSettings = {
     colorScheme: "rainbow",
-    showLegend: true,
-    legendPosition: "bottom",
+    legendPosition: "topRight",
     legendFontSize: defaultLegendSettings.legendFontSize!,
     maxLegendItems: defaultLegendSettings.maxLegendItems!,
     showXAxis: false,
@@ -66,8 +64,6 @@ export const defaultSettings: IDonutVisualSettings = {
     showYAxis: false,
     yAxisFontSize: 11,
     rotateXLabels: "never",
-    responsiveText: true,
-    fontScaleFactor: defaultFontScaleFactor,
     tooltip: { ...defaultTooltipSettings },
     useCustomColors: defaultCustomColorSettings.useCustomColors,
     customColors: [...defaultCustomColorSettings.customColors],
@@ -116,17 +112,9 @@ export function parseSettings(dataView: DataView): IDonutVisualSettings {
 
     const legendObj = objects["legend"];
     if (legendObj) {
-        settings.showLegend = (legendObj["show"] as boolean) ?? defaultSettings.showLegend;
         settings.legendPosition = (legendObj["position"] as LegendPosition) ?? defaultSettings.legendPosition;
         settings.legendFontSize = (legendObj["fontSize"] as number) ?? defaultSettings.legendFontSize;
         settings.maxLegendItems = (legendObj["maxItems"] as number) ?? defaultSettings.maxLegendItems;
-    }
-
-    const generalObj = objects["general"];
-    if (generalObj) {
-        settings.responsiveText = (generalObj["responsiveText"] as boolean) ?? defaultSettings.responsiveText;
-        settings.fontScaleFactor = (generalObj["fontScaleFactor"] as number) ?? defaultSettings.fontScaleFactor;
-        settings.fontScaleFactor = Math.max(0.5, Math.min(2.0, settings.fontScaleFactor));
     }
 
     const tooltipObj = objects["tooltipSettings"];
@@ -204,12 +192,16 @@ export function parseSettings(dataView: DataView): IDonutVisualSettings {
         settings.textSizes.centerLabelFontSize = (textSizesObj["centerLabelFontSize"] as number) ?? defaultSettings.textSizes.centerLabelFontSize;
         settings.textSizes.centerValueFontSize = (textSizesObj["centerValueFontSize"] as number) ?? defaultSettings.textSizes.centerValueFontSize;
 
-        const clamp = (v: number): number => v === 0 ? 0 : Math.max(8, Math.min(32, v));
-        settings.textSizes.legendFontSize = clamp(settings.textSizes.legendFontSize);
-        settings.textSizes.panelTitleFontSize = clamp(settings.textSizes.panelTitleFontSize);
-        settings.textSizes.sliceLabelFontSize = clamp(settings.textSizes.sliceLabelFontSize);
-        settings.textSizes.centerLabelFontSize = clamp(settings.textSizes.centerLabelFontSize);
-        settings.textSizes.centerValueFontSize = clamp(settings.textSizes.centerValueFontSize);
+        const clampFontSize = (v: number, max: number): number => {
+            const n = Number(v);
+            if (!Number.isFinite(n) || n <= 0) return 0;
+            return Math.max(6, Math.min(max, n));
+        };
+        settings.textSizes.legendFontSize = clampFontSize(settings.textSizes.legendFontSize, 40);
+        settings.textSizes.panelTitleFontSize = clampFontSize(settings.textSizes.panelTitleFontSize, 40);
+        settings.textSizes.sliceLabelFontSize = clampFontSize(settings.textSizes.sliceLabelFontSize, 40);
+        settings.textSizes.centerLabelFontSize = clampFontSize(settings.textSizes.centerLabelFontSize, 40);
+        settings.textSizes.centerValueFontSize = clampFontSize(settings.textSizes.centerValueFontSize, 120);
     }
 
     const smallMultObj = objects["smallMultiples"];

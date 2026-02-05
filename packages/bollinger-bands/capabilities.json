@@ -1,28 +1,22 @@
 {
   "dataRoles": [
     {
-      "displayName": "X-Axis",
+      "displayName": "Date/Time",
       "name": "xAxis",
       "kind": "Grouping",
-      "description": "Fields for the horizontal axis (e.g., dates, time periods)"
-    },
-    {
-      "displayName": "Y-Axis",
-      "name": "yAxis",
-      "kind": "Grouping",
-      "description": "Categories to rank"
-    },
-    {
-      "displayName": "Values",
-      "name": "values",
-      "kind": "Measure",
-      "description": "The measure used for ranking"
+      "description": "Date or time field for X-axis"
     },
     {
       "displayName": "Legend",
       "name": "legend",
       "kind": "Grouping",
-      "description": "Field used to color the series"
+      "description": "Optional field to split into series (like native Power BI charts)"
+    },
+    {
+      "displayName": "Value",
+      "name": "values",
+      "kind": "Measure",
+      "description": "Numeric value (e.g., closing price)"
     }
   ],
   "tooltips": {
@@ -33,12 +27,62 @@
     "roles": ["tooltips"]
   },
   "objects": {
-    "categoryColors": {
-      "displayName": "Data Colors",
+    "bollingerSettings": {
+      "displayName": "Bollinger Bands",
       "properties": {
-        "fill": {
-          "displayName": "Color",
+        "period": {
+          "displayName": "Period (N)",
+          "description": "Number of periods for SMA calculation",
+          "type": { "numeric": true }
+        },
+        "stdDeviation": {
+          "displayName": "Std Deviations (K)",
+          "description": "Standard deviation multiplier",
+          "type": { "numeric": true }
+        },
+        "showPriceLine": {
+          "displayName": "Show Price Line",
+          "type": { "bool": true }
+        },
+        "showMiddleBand": {
+          "displayName": "Show Middle Band (SMA)",
+          "type": { "bool": true }
+        },
+        "showBands": {
+          "displayName": "Show Upper/Lower Bands",
+          "type": { "bool": true }
+        },
+        "showBandFill": {
+          "displayName": "Show Band Fill",
+          "type": { "bool": true }
+        },
+        "priceLineColor": {
+          "displayName": "Price Line Color",
           "type": { "fill": { "solid": { "color": true } } }
+        },
+        "middleBandColor": {
+          "displayName": "Middle Band Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "upperBandColor": {
+          "displayName": "Upper Band Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "lowerBandColor": {
+          "displayName": "Lower Band Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "bandFillColor": {
+          "displayName": "Band Fill Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "bandFillOpacity": {
+          "displayName": "Band Fill Opacity",
+          "type": { "numeric": true }
+        },
+        "lineWidth": {
+          "displayName": "Line Width",
+          "type": { "numeric": true }
         }
       }
     },
@@ -94,44 +138,6 @@
         "showColorSwatch": {
           "displayName": "Show Color Swatch",
           "type": { "bool": true }
-        }
-      }
-    },
-    "customColors": {
-      "displayName": "Custom Colors",
-      "properties": {
-        "useCustomColors": {
-          "displayName": "Use Custom Colors",
-          "description": "Enable custom colors for each data category",
-          "type": { "bool": true }
-        },
-        "colorList": {
-          "displayName": "Colors",
-          "description": "Comma-separated hex colors (e.g., #ff0000, #00ff00, #0000ff)",
-          "type": { "text": true }
-        }
-      }
-    },
-    "colorScheme": {
-      "displayName": "Color Scheme",
-      "properties": {
-        "scheme": {
-          "displayName": "Color Scheme",
-          "type": {
-            "enumeration": [
-              { "value": "blues", "displayName": "Blues" },
-              { "value": "greens", "displayName": "Greens" },
-              { "value": "reds", "displayName": "Reds" },
-              { "value": "purples", "displayName": "Purples" },
-              { "value": "oranges", "displayName": "Oranges" },
-              { "value": "teals", "displayName": "Teals" },
-              { "value": "pinks", "displayName": "Pinks" },
-              { "value": "warm", "displayName": "Warm" },
-              { "value": "rainbow", "displayName": "Rainbow" },
-              { "value": "pastel", "displayName": "Pastel" },
-              { "value": "vibrant", "displayName": "Vibrant" }
-            ]
-          }
         }
       }
     },
@@ -203,23 +209,6 @@
         }
       }
     },
-    "bumpChartSettings": {
-      "displayName": "Bump Chart",
-      "properties": {
-        "lineThickness": {
-          "displayName": "Line Thickness",
-          "type": { "numeric": true }
-        },
-        "showMarkers": {
-          "displayName": "Show Markers",
-          "type": { "bool": true }
-        },
-        "markerSize": {
-          "displayName": "Marker Size",
-          "type": { "numeric": true }
-        }
-      }
-    },
     "textSizes": {
       "displayName": "Text Sizes",
       "description": "Manual font size overrides (0 = auto/responsive)",
@@ -243,11 +232,6 @@
           "displayName": "Panel Title Font Size",
           "description": "0 = auto, 8-32 = manual size",
           "type": { "formatting": { "fontSize": true } }
-        },
-        "endLabelFontSize": {
-          "displayName": "End Label Font Size",
-          "description": "0 = auto, 8-32 = manual size",
-          "type": { "formatting": { "fontSize": true } }
         }
       }
     }
@@ -257,16 +241,14 @@
       "conditions": [
         {
           "xAxis": { "max": 1 },
-          "yAxis": { "max": 1 },
-          "values": { "max": 1 },
-          "legend": { "max": 1 }
+          "legend": { "max": 1 },
+          "values": { "max": 1 }
         }
       ],
       "categorical": {
         "categories": {
           "select": [
             { "for": { "in": "xAxis" } },
-            { "for": { "in": "yAxis" } },
             { "for": { "in": "legend" } }
           ],
           "dataReductionAlgorithm": {

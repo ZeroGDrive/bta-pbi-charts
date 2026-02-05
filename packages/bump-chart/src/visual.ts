@@ -14,6 +14,7 @@ import ISelectionId = powerbi.visuals.ISelectionId;
 import {
     RenderContext,
     createTooltipCard,
+    createTextSizesCard,
     readCategoryColorsFromDataView,
     findCategoryIndex,
     getSchemeColors,
@@ -71,6 +72,12 @@ export class Visual implements IVisual {
         const height = options.viewport.height;
 
         this.svg.attr("width", width).attr("height", height);
+
+        // Hide tooltip when mouse leaves the chart entirely
+        this.svg.on("mouseleave", () => {
+            this.htmlTooltip?.hide();
+            this.host.tooltipService.hide({ immediately: true, isTouchEvent: false });
+        });
 
         // Validate data
         if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].categorical) {
@@ -158,8 +165,7 @@ export class Visual implements IVisual {
                 "X-Axis: Date / Period",
                 "Y-Axis: Category (ranked)",
                 "Values: Measure (used for ranking)",
-                "Legend (optional): Color by field",
-                "Group By (optional): Small multiples panels"
+                "Legend (optional): Color by field"
             ],
             hint: "Tip: Use the Format pane to adjust label sizes, colors, and legend layout."
         });
@@ -325,13 +331,13 @@ export class Visual implements IVisual {
                 uid: "legend_group",
                 slices: [
                     {
-                        uid: "legend_show",
-                        displayName: "Show Legend",
+                        uid: "legend_position",
+                        displayName: "Position",
                         control: {
-                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            type: powerbi.visuals.FormattingComponent.Dropdown,
                             properties: {
-                                descriptor: { objectName: "legend", propertyName: "show" },
-                                value: this.settings.showLegend
+                                descriptor: { objectName: "legend", propertyName: "position" },
+                                value: this.settings.legendPosition
                             }
                         }
                     } as powerbi.visuals.FormattingSlice,
@@ -342,13 +348,41 @@ export class Visual implements IVisual {
                             type: powerbi.visuals.FormattingComponent.NumUpDown,
                             properties: {
                                 descriptor: { objectName: "legend", propertyName: "fontSize" },
-                                value: this.settings.legendFontSize
+                                value: this.settings.legendFontSize,
+                                options: {
+                                    minValue: { type: powerbi.visuals.ValidatorType.Min, value: 6 },
+                                    maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 40 }
+                                }
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "legend_maxItems",
+                        displayName: "Max Items",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.NumUpDown,
+                            properties: {
+                                descriptor: { objectName: "legend", propertyName: "maxItems" },
+                                value: this.settings.maxLegendItems,
+                                options: {
+                                    minValue: { type: powerbi.visuals.ValidatorType.Min, value: 1 },
+                                    maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 50 }
+                                }
                             }
                         }
                     } as powerbi.visuals.FormattingSlice
                 ]
             }]
         });
+
+        // Text Sizes card (shows effective starting sizes instead of 0="auto")
+        cards.push(createTextSizesCard({
+            xAxisFontSize: this.settings.textSizes.xAxisFontSize || this.settings.xAxisFontSize,
+            yAxisFontSize: this.settings.textSizes.yAxisFontSize || this.settings.yAxisFontSize,
+            legendFontSize: this.settings.textSizes.legendFontSize || this.settings.legendFontSize,
+            panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize,
+            endLabelFontSize: this.settings.textSizes.endLabelFontSize || this.settings.yAxisFontSize
+        }));
 
         // Bump Chart card
         cards.push({

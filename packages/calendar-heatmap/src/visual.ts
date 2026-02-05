@@ -14,10 +14,7 @@ import {
     RenderContext,
     createCalendarSettingsCard,
     createColorSchemeCard,
-    createGeneralCard,
     createGradientColorsCard,
-    createLegendCard,
-    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     createYAxisCard,
@@ -70,6 +67,12 @@ export class Visual implements IVisual {
 
         this.svg.attr("width", width).attr("height", height);
 
+        // Hide tooltip when mouse leaves the chart entirely
+        this.svg.on("mouseleave", () => {
+            this.htmlTooltip?.hide();
+            this.host.tooltipService.hide({ immediately: true, isTouchEvent: false });
+        });
+
         // Validate data
         if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].categorical) {
             this.renderNoData(width, height);
@@ -114,8 +117,7 @@ export class Visual implements IVisual {
             title: "Set up Calendar Heatmap",
             lines: [
                 "Date: Daily date field",
-                "Values: Measure (cell intensity)",
-                "Group By (optional): Small multiples panels"
+                "Values: Measure (cell intensity)"
             ],
             hint: "Tip: Use a Date column (not Month name) for proper daily placement."
         });
@@ -147,23 +149,11 @@ export class Visual implements IVisual {
             return { cards };
         }
 
-        cards.push(createGeneralCard({
-            responsiveText: this.settings.responsiveText,
-            fontScaleFactor: this.settings.fontScaleFactor
-        }));
-
         cards.push(createTooltipCard(this.settings.tooltip));
 
         cards.push(createColorSchemeCard(this.settings.colorScheme));
 
         cards.push(createGradientColorsCard(this.settings.calendar.minColor, this.settings.calendar.maxColor));
-
-        cards.push(createLegendCard({
-            show: this.settings.showLegend,
-            position: this.settings.legendPosition,
-            fontSize: this.settings.legendFontSize,
-            maxItems: this.settings.maxLegendItems
-        }));
 
         // Day labels live in yAxisSettings
         cards.push(createYAxisCard({
@@ -171,11 +161,14 @@ export class Visual implements IVisual {
             fontSize: this.settings.yAxisFontSize
         }));
 
-        cards.push(createTextSizesCard(this.settings.textSizes));
+        cards.push(createTextSizesCard({
+            yearLabelFontSize: this.settings.textSizes.yearLabelFontSize || 11,
+            monthLabelFontSize: this.settings.textSizes.monthLabelFontSize || 9,
+            dayLabelFontSize: this.settings.textSizes.dayLabelFontSize || this.settings.yAxisFontSize,
+            panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize
+        }));
 
         cards.push(createCalendarSettingsCard(this.settings.calendar));
-
-        cards.push(createSmallMultiplesCard(this.settings.smallMultiples));
 
         return { cards };
     }

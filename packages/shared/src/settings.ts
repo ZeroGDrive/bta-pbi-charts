@@ -6,7 +6,11 @@ export type ColorScheme =
     | "oranges" | "teals" | "pinks"      // NEW single-hue
     | "rainbow" | "pastel" | "vibrant";  // NEW multi-color
 
-export type LegendPosition = "top" | "right" | "bottom";
+export type LegendPosition =
+    | "topLeft" | "topCenter" | "topRight"
+    | "topLeftStacked" | "topRightStacked"
+    | "centerLeft" | "centerRight"
+    | "bottomLeft" | "bottomCenter" | "bottomRight";
 export type CellSize = "small" | "medium" | "large";
 export type WeekStart = "sunday" | "monday";
 export type RotateLabelsMode = "auto" | "always" | "never";
@@ -23,10 +27,9 @@ export interface ISmallMultiplesSettings {
 }
 
 export interface ILegendSettings {
-    showLegend: boolean;
     legendPosition: LegendPosition;
-    legendFontSize: number;      // NEW
-    maxLegendItems: number;      // NEW (default 10, was hardcoded 6)
+    legendFontSize: number;
+    maxLegendItems: number;
 }
 
 // Custom colors for data groups - allows per-category color control
@@ -58,13 +61,13 @@ export interface ITooltipSettings {
 
 /**
  * Text size settings for manual font size control
- * Value of 0 means "auto/responsive", positive values (8-32) are manual overrides
+ * Value of 0 means "auto/responsive", positive values (6-40) are manual overrides
  */
 export interface ITextSizeSettings {
-    xAxisFontSize: number;      // 0 = auto, 8-32 = manual
-    yAxisFontSize: number;      // 0 = auto, 8-32 = manual
-    legendFontSize: number;     // 0 = auto, 8-32 = manual
-    panelTitleFontSize: number; // 0 = auto, 8-32 = manual
+    xAxisFontSize: number;      // 0 = auto, 6-40 = manual
+    yAxisFontSize: number;      // 0 = auto, 6-40 = manual
+    legendFontSize: number;     // 0 = auto, 6-40 = manual
+    panelTitleFontSize: number; // 0 = auto, 6-40 = manual
 }
 
 /**
@@ -85,7 +88,7 @@ export const defaultTooltipSettings: ITooltipSettings = {
     borderColor: "#e5e7eb",
     textColor: "#111827",
     borderRadius: 10,
-    shadow: true,
+    shadow: false,
     maxWidth: 320,
     showColorSwatch: true
 };
@@ -94,8 +97,6 @@ export const defaultTooltipSettings: ITooltipSettings = {
 export interface IBaseVisualSettings extends ILegendSettings, IAxisSettings, ICustomColorSettings {
     colorScheme: ColorScheme;
     smallMultiples: ISmallMultiplesSettings;
-    responsiveText: boolean;  // NEW - enable/disable responsive scaling
-    fontScaleFactor: number;  // Controls how aggressively fonts scale (0.5-2.0, default 1.0)
     tooltip: ITooltipSettings;
 }
 
@@ -125,8 +126,7 @@ export const defaultSmallMultiplesSettings: ISmallMultiplesSettings = {
 
 // Default legend settings
 export const defaultLegendSettings: Partial<ILegendSettings> = {
-    showLegend: true,
-    legendPosition: "right" as LegendPosition,
+    legendPosition: "topRight" as LegendPosition,
     legendFontSize: 11,
     maxLegendItems: 10
 };
@@ -149,6 +149,3 @@ export const defaultCustomColorSettings: ICustomColorSettings = {
         "#a855f7"   // Violet
     ]
 };
-
-// Default font scaling
-export const defaultFontScaleFactor = 1.0;

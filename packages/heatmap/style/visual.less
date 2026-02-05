@@ -9,6 +9,24 @@
         text-rendering: geometricPrecision;
     }
 
+    // Crisp rendering for straight lines
+    svg {
+        shape-rendering: crispEdges;
+    }
+
+    // Crisp axis lines
+    .x-axis line,
+    .y-axis line,
+    .grid-line {
+        shape-rendering: crispEdges;
+        vector-effect: non-scaling-stroke;
+    }
+
+    // Crisp rectangles (heatmap cells, legend boxes)
+    rect {
+        shape-rendering: crispEdges;
+    }
+
     .chart-container {
         overflow: visible;
     }

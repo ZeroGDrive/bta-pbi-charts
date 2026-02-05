@@ -9,6 +9,25 @@
         text-rendering: geometricPrecision;
     }
 
+    // Crisp rendering for straight lines
+    svg {
+        shape-rendering: crispEdges;
+    }
+
+    // Smooth rendering for curves (donut slices)
+    .donut-slice,
+    path[d*="C"],
+    path[d*="Q"],
+    path[d*="A"],
+    circle {
+        shape-rendering: geometricPrecision;
+    }
+
+    // Crisp rectangles (legend boxes)
+    rect {
+        shape-rendering: crispEdges;
+    }
+
     .chart-container {
         overflow: visible;
     }

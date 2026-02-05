@@ -6,6 +6,7 @@ import { ChartData, DataPoint, formatDataValue, sortDateValues } from "@pbi-visu
 
 export interface StreamgraphData extends ChartData {
     stackedData: Map<string, Map<string, number>>;
+    hasLegendRoleData: boolean;
 }
 
 export class StreamgraphTransformer {
@@ -19,7 +20,7 @@ export class StreamgraphTransformer {
 
         let xAxisIndex = -1;
         let yAxisIndex = -1;
-        let groupByIndex = -1;
+        let legendIndex = -1;
 
         if (categorical.categories) {
             categorical.categories.forEach((cat, idx) => {
@@ -27,19 +28,23 @@ export class StreamgraphTransformer {
                 if (role) {
                     if (role["xAxis"]) xAxisIndex = idx;
                     if (role["yAxis"]) yAxisIndex = idx;
-                    if (role["groupBy"]) groupByIndex = idx;
+                    if (role["legend"]) legendIndex = idx;
                 }
             });
         }
 
         const values = categorical.values?.[0]?.values || [];
+        const valueFormatString = (categorical.values?.[0]?.source as any)?.format as string | undefined;
+
+        // Prefer the dedicated legend role for series when bound; fall back to yAxis for legacy configs.
+        const seriesIndex = legendIndex >= 0 ? legendIndex : yAxisIndex;
 
         // Build data points
         for (let i = 0; i < values.length; i++) {
             const rawXValue = xAxisIndex >= 0 ? categorical.categories![xAxisIndex].values[i] : null;
             const xValue = formatDataValue(rawXValue, i);
-            const yValue = yAxisIndex >= 0 ? String(categorical.categories![yAxisIndex].values[i] ?? "") : "Series";
-            const groupValue = groupByIndex >= 0 ? String(categorical.categories![groupByIndex].values[i] ?? "") : "All";
+            const yValue = seriesIndex >= 0 ? String(categorical.categories![seriesIndex].values[i] ?? "") : "Series";
+            const groupValue = "All";
             const value = Number(values[i]) || 0;
 
             if (value > maxValue) maxValue = value;
@@ -80,6 +85,7 @@ export class StreamgraphTransformer {
             }
         });
 
-        return { dataPoints, xValues, yValues, groups, maxValue, minValue, stackedData };
+        const hasLegendRoleData = legendIndex >= 0;
+        return { dataPoints, xValues, yValues, groups, maxValue, minValue, stackedData, hasLegendRoleData, valueFormatString };
     }
 }

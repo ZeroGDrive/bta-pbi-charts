@@ -4,10 +4,8 @@ import powerbi from "powerbi-visuals-api";
 import DataView = powerbi.DataView;
 import {
     IBaseVisualSettings,
-    ColorScheme,
     LegendPosition,
     RotateLabelsMode,
-    colorSchemes,
     defaultSmallMultiplesSettings,
     defaultLegendSettings,
     defaultCustomColorSettings,
@@ -16,32 +14,51 @@ import {
     TooltipTheme
 } from "@pbi-visuals/shared";
 
-export interface IHeatmapSettings {
-    cellPadding: number;
-    showValues: boolean;
-    minColor: string;
-    maxColor: string;
-    horizontalAlignment: "left" | "center" | "right";  // NEW
-    verticalAlignment: "top" | "center" | "bottom";    // NEW
-    marginTop: number;     // NEW
-    marginBottom: number;  // NEW
-    marginLeft: number;    // NEW
-    marginRight: number;   // NEW
+export interface IBollingerSettings {
+    period: number;              // Default: 20
+    stdDeviation: number;        // Default: 2
+    showPriceLine: boolean;      // Default: true
+    showMiddleBand: boolean;     // Default: true
+    showBands: boolean;          // Default: true
+    showBandFill: boolean;       // Default: true
+    priceLineColor: string;      // Default: "#2171b5" (blue)
+    middleBandColor: string;     // Default: "#aaaaaa" (gray)
+    upperBandColor: string;      // Default: "#e41a1c" (red)
+    lowerBandColor: string;      // Default: "#4daf4a" (green)
+    bandFillColor: string;       // Default: "#cccccc"
+    bandFillOpacity: number;     // Default: 0.2
+    lineWidth: number;           // Default: 1.5
 }
 
-export interface IHeatmapTextSizeSettings {
+export interface IBollingerTextSizeSettings {
     xAxisFontSize: number;      // 0 = auto, 8-32 = manual
     yAxisFontSize: number;      // 0 = auto, 8-32 = manual
+    legendFontSize: number;     // 0 = auto, 8-32 = manual
     panelTitleFontSize: number; // 0 = auto, 8-32 = manual
-    valueLabelFontSize: number; // 0 = auto, 8-32 = manual (cell values)
 }
 
-export interface IHeatmapVisualSettings extends IBaseVisualSettings {
-    heatmap: IHeatmapSettings;
-    textSizes: IHeatmapTextSizeSettings;
+export interface IBollingerVisualSettings extends IBaseVisualSettings {
+    bollinger: IBollingerSettings;
+    textSizes: IBollingerTextSizeSettings;
 }
 
-export const defaultSettings: IHeatmapVisualSettings = {
+export const defaultBollingerSettings: IBollingerSettings = {
+    period: 20,
+    stdDeviation: 2,
+    showPriceLine: true,
+    showMiddleBand: true,
+    showBands: true,
+    showBandFill: true,
+    priceLineColor: "#2171b5",
+    middleBandColor: "#aaaaaa",
+    upperBandColor: "#e41a1c",
+    lowerBandColor: "#4daf4a",
+    bandFillColor: "#cccccc",
+    bandFillOpacity: 0.2,
+    lineWidth: 1.5
+};
+
+export const defaultSettings: IBollingerVisualSettings = {
     colorScheme: "blues",
     legendPosition: "topRight",
     legendFontSize: defaultLegendSettings.legendFontSize!,
@@ -54,44 +71,22 @@ export const defaultSettings: IHeatmapVisualSettings = {
     tooltip: { ...defaultTooltipSettings },
     useCustomColors: defaultCustomColorSettings.useCustomColors,
     customColors: [...defaultCustomColorSettings.customColors],
-    heatmap: {
-        cellPadding: 2,
-        showValues: true,
-        minColor: "#f7fbff",
-        maxColor: "#08519c",
-        horizontalAlignment: "left",
-        verticalAlignment: "top",
-        marginTop: 0,
-        marginBottom: 0,
-        marginLeft: 0,
-        marginRight: 0
-    },
+    bollinger: { ...defaultBollingerSettings },
     textSizes: {
         xAxisFontSize: 0,
         yAxisFontSize: 0,
-        panelTitleFontSize: 0,
-        valueLabelFontSize: 0
+        legendFontSize: 0,
+        panelTitleFontSize: 0
     },
     smallMultiples: { ...defaultSmallMultiplesSettings }
 };
 
-export function parseSettings(dataView: DataView): IHeatmapVisualSettings {
+export function parseSettings(dataView: DataView): IBollingerVisualSettings {
     const objects = dataView?.metadata?.objects;
-    const settings: IHeatmapVisualSettings = JSON.parse(JSON.stringify(defaultSettings));
+    const settings: IBollingerVisualSettings = JSON.parse(JSON.stringify(defaultSettings));
 
     if (!objects) {
         return settings;
-    }
-
-    // Color scheme
-    const colorSchemeObj = objects["colorScheme"];
-    if (colorSchemeObj) {
-        settings.colorScheme = (colorSchemeObj["scheme"] as ColorScheme) ?? defaultSettings.colorScheme;
-        const scheme = colorSchemes[settings.colorScheme];
-        if (scheme) {
-            settings.heatmap.minColor = scheme.min;
-            settings.heatmap.maxColor = scheme.max;
-        }
     }
 
     // Legend settings
@@ -125,23 +120,6 @@ export function parseSettings(dataView: DataView): IHeatmapVisualSettings {
         settings.tooltip.maxWidth = Math.max(160, Math.min(560, settings.tooltip.maxWidth));
     }
 
-    // Custom colors settings
-    const customColorsObj = objects["customColors"];
-    if (customColorsObj) {
-        settings.useCustomColors = (customColorsObj["useCustomColors"] as boolean) ?? defaultSettings.useCustomColors;
-
-        // Parse comma-separated color list
-        const colorListStr = customColorsObj["colorList"] as string;
-        if (colorListStr && typeof colorListStr === "string" && colorListStr.trim()) {
-            const parsedColors = colorListStr
-                .split(",")
-                .map(c => c.trim())
-                .filter(c => c.length > 0 && (c.startsWith("#") || c.match(/^[a-fA-F0-9]{6}$/)));
-
-            settings.customColors = parsedColors.map(c => c.startsWith("#") ? c : `#${c}`);
-        }
-    }
-
     // X-Axis settings
     const xAxisObj = objects["xAxisSettings"];
     if (xAxisObj) {
@@ -162,8 +140,8 @@ export function parseSettings(dataView: DataView): IHeatmapVisualSettings {
     if (textSizesObj) {
         settings.textSizes.xAxisFontSize = (textSizesObj["xAxisFontSize"] as number) ?? defaultSettings.textSizes.xAxisFontSize;
         settings.textSizes.yAxisFontSize = (textSizesObj["yAxisFontSize"] as number) ?? defaultSettings.textSizes.yAxisFontSize;
+        settings.textSizes.legendFontSize = (textSizesObj["legendFontSize"] as number) ?? defaultSettings.textSizes.legendFontSize;
         settings.textSizes.panelTitleFontSize = (textSizesObj["panelTitleFontSize"] as number) ?? defaultSettings.textSizes.panelTitleFontSize;
-        settings.textSizes.valueLabelFontSize = (textSizesObj["valueLabelFontSize"] as number) ?? defaultSettings.textSizes.valueLabelFontSize;
         // Clamp values (0 = auto, otherwise 6-40)
         const clampFontSize = (v: number): number => {
             const n = Number(v);
@@ -172,40 +150,41 @@ export function parseSettings(dataView: DataView): IHeatmapVisualSettings {
         };
         settings.textSizes.xAxisFontSize = clampFontSize(settings.textSizes.xAxisFontSize);
         settings.textSizes.yAxisFontSize = clampFontSize(settings.textSizes.yAxisFontSize);
+        settings.textSizes.legendFontSize = clampFontSize(settings.textSizes.legendFontSize);
         settings.textSizes.panelTitleFontSize = clampFontSize(settings.textSizes.panelTitleFontSize);
-        settings.textSizes.valueLabelFontSize = clampFontSize(settings.textSizes.valueLabelFontSize);
     }
 
-    // Heatmap settings
-    const heatmapObj = objects["heatmapSettings"];
-    if (heatmapObj) {
-        settings.heatmap.cellPadding = (heatmapObj["cellPadding"] as number) ?? defaultSettings.heatmap.cellPadding;
-        settings.heatmap.showValues = (heatmapObj["showValues"] as boolean) ?? defaultSettings.heatmap.showValues;
+    // Bollinger Bands settings
+    const bollingerObj = objects["bollingerSettings"];
+    if (bollingerObj) {
+        settings.bollinger.period = (bollingerObj["period"] as number) ?? defaultSettings.bollinger.period;
+        settings.bollinger.stdDeviation = (bollingerObj["stdDeviation"] as number) ?? defaultSettings.bollinger.stdDeviation;
+        settings.bollinger.showPriceLine = (bollingerObj["showPriceLine"] as boolean) ?? defaultSettings.bollinger.showPriceLine;
+        settings.bollinger.showMiddleBand = (bollingerObj["showMiddleBand"] as boolean) ?? defaultSettings.bollinger.showMiddleBand;
+        settings.bollinger.showBands = (bollingerObj["showBands"] as boolean) ?? defaultSettings.bollinger.showBands;
+        settings.bollinger.showBandFill = (bollingerObj["showBandFill"] as boolean) ?? defaultSettings.bollinger.showBandFill;
+        settings.bollinger.lineWidth = (bollingerObj["lineWidth"] as number) ?? defaultSettings.bollinger.lineWidth;
 
-        const minColorObj = heatmapObj["minColor"] as any;
-        const maxColorObj = heatmapObj["maxColor"] as any;
-        if (minColorObj?.solid?.color) {
-            settings.heatmap.minColor = minColorObj.solid.color;
-        }
-        if (maxColorObj?.solid?.color) {
-            settings.heatmap.maxColor = maxColorObj.solid.color;
-        }
+        // Parse color values
+        const priceColor = bollingerObj["priceLineColor"] as any;
+        const middleColor = bollingerObj["middleBandColor"] as any;
+        const upperColor = bollingerObj["upperBandColor"] as any;
+        const lowerColor = bollingerObj["lowerBandColor"] as any;
+        const fillColor = bollingerObj["bandFillColor"] as any;
 
-        // Alignment settings
-        settings.heatmap.horizontalAlignment = (heatmapObj["horizontalAlignment"] as "left" | "center" | "right") ?? defaultSettings.heatmap.horizontalAlignment;
-        settings.heatmap.verticalAlignment = (heatmapObj["verticalAlignment"] as "top" | "center" | "bottom") ?? defaultSettings.heatmap.verticalAlignment;
+        if (priceColor?.solid?.color) settings.bollinger.priceLineColor = priceColor.solid.color;
+        if (middleColor?.solid?.color) settings.bollinger.middleBandColor = middleColor.solid.color;
+        if (upperColor?.solid?.color) settings.bollinger.upperBandColor = upperColor.solid.color;
+        if (lowerColor?.solid?.color) settings.bollinger.lowerBandColor = lowerColor.solid.color;
+        if (fillColor?.solid?.color) settings.bollinger.bandFillColor = fillColor.solid.color;
 
-        // Margin settings
-        settings.heatmap.marginTop = (heatmapObj["marginTop"] as number) ?? defaultSettings.heatmap.marginTop;
-        settings.heatmap.marginBottom = (heatmapObj["marginBottom"] as number) ?? defaultSettings.heatmap.marginBottom;
-        settings.heatmap.marginLeft = (heatmapObj["marginLeft"] as number) ?? defaultSettings.heatmap.marginLeft;
-        settings.heatmap.marginRight = (heatmapObj["marginRight"] as number) ?? defaultSettings.heatmap.marginRight;
+        settings.bollinger.bandFillOpacity = (bollingerObj["bandFillOpacity"] as number) ?? defaultSettings.bollinger.bandFillOpacity;
 
-        // Clamp margin values
-        settings.heatmap.marginTop = Math.max(0, Math.min(100, settings.heatmap.marginTop));
-        settings.heatmap.marginBottom = Math.max(0, Math.min(100, settings.heatmap.marginBottom));
-        settings.heatmap.marginLeft = Math.max(0, Math.min(100, settings.heatmap.marginLeft));
-        settings.heatmap.marginRight = Math.max(0, Math.min(100, settings.heatmap.marginRight));
+        // Clamp values
+        settings.bollinger.period = Math.max(2, Math.min(200, settings.bollinger.period));
+        settings.bollinger.stdDeviation = Math.max(0.5, Math.min(5, settings.bollinger.stdDeviation));
+        settings.bollinger.lineWidth = Math.max(0.5, Math.min(5, settings.bollinger.lineWidth));
+        settings.bollinger.bandFillOpacity = Math.max(0, Math.min(1, settings.bollinger.bandFillOpacity));
     }
 
     // Small Multiples settings
@@ -216,7 +195,6 @@ export function parseSettings(dataView: DataView): IHeatmapVisualSettings {
         settings.smallMultiples.showTitle = (smallMultObj["showTitle"] as boolean) ?? defaultSettings.smallMultiples.showTitle;
         settings.smallMultiples.titleFontSize = (smallMultObj["titleFontSize"] as number) ?? defaultSettings.smallMultiples.titleFontSize;
         settings.smallMultiples.titleSpacing = (smallMultObj["titleSpacing"] as number) ?? defaultSettings.smallMultiples.titleSpacing;
-        // Clamp values
         settings.smallMultiples.columns = Math.max(1, Math.min(6, settings.smallMultiples.columns));
         settings.smallMultiples.spacing = Math.max(10, Math.min(50, settings.smallMultiples.spacing));
         settings.smallMultiples.titleSpacing = Math.max(10, Math.min(50, settings.smallMultiples.titleSpacing));

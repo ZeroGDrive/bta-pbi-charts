@@ -9,27 +9,107 @@ import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import ITooltipService = powerbi.extensibility.ITooltipService;
-import ISelectionId = powerbi.visuals.ISelectionId;
 
 import {
     RenderContext,
-    createColorSchemeCard,
-    createDataColorsCard,
     createLegendCard,
-    createStreamgraphSettingsCard,
     createTextSizesCard,
     createTooltipCard,
     createXAxisCard,
     createYAxisCard,
-    findCategoryIndex,
-    getSchemeColors,
-    readCategoryColorsFromDataView,
     renderEmptyState,
     HtmlTooltip
 } from "@pbi-visuals/shared";
-import { IStreamgraphVisualSettings, parseSettings } from "./settings";
-import { StreamgraphTransformer } from "./StreamgraphTransformer";
-import { StreamgraphRenderer } from "./StreamgraphRenderer";
+import { IBollingerVisualSettings, parseSettings } from "./settings";
+import { BollingerTransformer } from "./BollingerTransformer";
+import { BollingerRenderer } from "./BollingerRenderer";
+
+function createBollingerSettingsCard(settings: IBollingerVisualSettings["bollinger"]): powerbi.visuals.FormattingCard {
+    return {
+        displayName: "Bollinger Bands",
+        uid: "bollinger_card",
+        groups: [
+            {
+                displayName: "Calculation",
+                uid: "bollinger_calc_group",
+                slices: [
+                    {
+                        uid: "bollinger_period",
+                        displayName: "Period (N)",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.NumUpDown,
+                            properties: {
+                                descriptor: { objectName: "bollingerSettings", propertyName: "period" },
+                                value: settings.period
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "bollinger_stdDeviation",
+                        displayName: "Std Deviations (K)",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.NumUpDown,
+                            properties: {
+                                descriptor: { objectName: "bollingerSettings", propertyName: "stdDeviation" },
+                                value: settings.stdDeviation
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice
+                ]
+            },
+            {
+                displayName: "Display",
+                uid: "bollinger_display_group",
+                slices: [
+                    {
+                        uid: "bollinger_showPriceLine",
+                        displayName: "Show Price Line",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "bollingerSettings", propertyName: "showPriceLine" },
+                                value: settings.showPriceLine
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "bollinger_showMiddleBand",
+                        displayName: "Show Middle Band (SMA)",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "bollingerSettings", propertyName: "showMiddleBand" },
+                                value: settings.showMiddleBand
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "bollinger_showBands",
+                        displayName: "Show Upper/Lower Bands",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "bollingerSettings", propertyName: "showBands" },
+                                value: settings.showBands
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice,
+                    {
+                        uid: "bollinger_showBandFill",
+                        displayName: "Show Band Fill",
+                        control: {
+                            type: powerbi.visuals.FormattingComponent.ToggleSwitch,
+                            properties: {
+                                descriptor: { objectName: "bollingerSettings", propertyName: "showBandFill" },
+                                value: settings.showBandFill
+                            }
+                        }
+                    } as powerbi.visuals.FormattingSlice
+                ]
+            }
+        ]
+    };
+}
 
 export class Visual implements IVisual {
     private static instanceCounter: number = 0;
@@ -38,27 +118,21 @@ export class Visual implements IVisual {
     private container: d3.Selection<SVGGElement, unknown, null, undefined>;
     private host: IVisualHost;
     private tooltipService: ITooltipService;
-    private settings: IStreamgraphVisualSettings | null = null;
-    private renderer: StreamgraphRenderer | null = null;
+    private settings: IBollingerVisualSettings | null = null;
+    private renderer: BollingerRenderer | null = null;
     private htmlTooltip: HtmlTooltip | null = null;
     private tooltipOwnerId: string;
-
-    // Data-bound colors
-    private categorySelectionIds: Map<string, ISelectionId> = new Map();
-    private categories: string[] = [];
-    private categoryColors: Map<string, string> = new Map();
-    private categoryFieldIndex: number = -1;
 
     constructor(options: VisualConstructorOptions) {
         this.host = options.host;
         this.target = options.element;
         this.tooltipService = this.host.tooltipService;
-        this.tooltipOwnerId = `bta-streamgraph-${Visual.instanceCounter++}`;
+        this.tooltipOwnerId = `bta-bollinger-${Visual.instanceCounter++}`;
 
         this.svg = d3.select(this.target)
             .append("svg")
             .classed("pbi-visual", true)
-            .classed("streamgraph-visual", true);
+            .classed("bollinger-visual", true);
 
         this.svg
             .style("position", "absolute")
@@ -69,7 +143,6 @@ export class Visual implements IVisual {
     }
 
     public update(options: VisualUpdateOptions) {
-        // Clear previous content
         this.svg.selectAll("*").remove();
         this.container = this.svg.append("g").classed("chart-container", true);
         this.htmlTooltip?.hide();
@@ -85,30 +158,15 @@ export class Visual implements IVisual {
             this.host.tooltipService.hide({ immediately: true, isTouchEvent: false });
         });
 
-        // Validate data
         if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].categorical) {
             this.renderNoData(width, height);
             return;
         }
 
         const dataView = options.dataViews[0];
-
-        // Parse settings
         this.settings = parseSettings(dataView);
         this.syncHtmlTooltip();
 
-        // Prefer legend for series colors/selection IDs when bound; otherwise fall back to yAxis (legacy).
-        const legendCategoryIndex = findCategoryIndex(dataView, "legend");
-        const yAxisCategoryIndex = findCategoryIndex(dataView, "yAxis");
-        this.categoryFieldIndex = legendCategoryIndex >= 0 ? legendCategoryIndex : yAxisCategoryIndex;
-
-        // Build selection IDs for each unique category
-        this.buildCategorySelectionIds(dataView);
-
-        // Read any user-selected colors from the dataView
-        this.categoryColors = readCategoryColorsFromDataView(dataView, this.categoryFieldIndex);
-
-        // Create render context
         const context: RenderContext = {
             svg: this.svg,
             container: this.container,
@@ -119,63 +177,30 @@ export class Visual implements IVisual {
             htmlTooltip: this.htmlTooltip
         };
 
-        // Create renderer
-        this.renderer = new StreamgraphRenderer(context);
+        this.renderer = new BollingerRenderer(context);
+        const chartData = BollingerTransformer.transform(
+            dataView.categorical,
+            this.settings.bollinger.period,
+            this.settings.bollinger.stdDeviation
+        );
 
-        // Transform data
-        const chartData = StreamgraphTransformer.transform(dataView.categorical);
-
-        // Check if data is empty
         if (!chartData.dataPoints || chartData.dataPoints.length === 0) {
             this.renderNoData(width, height);
             return;
         }
 
-        // Pass color overrides to chart data
-        chartData.categoryColorMap = this.categoryColors;
-
-        // Render the chart
         this.renderer.render(chartData, this.settings);
-    }
-
-    private buildCategorySelectionIds(dataView: powerbi.DataView): void {
-        this.categorySelectionIds.clear();
-        this.categories = [];
-
-        if (this.categoryFieldIndex < 0 || !dataView.categorical?.categories?.[this.categoryFieldIndex]) {
-            return;
-        }
-
-        const categoryColumn = dataView.categorical.categories[this.categoryFieldIndex];
-        const seenCategories = new Set<string>();
-
-        for (let i = 0; i < categoryColumn.values.length; i++) {
-            const categoryValue = String(categoryColumn.values[i] ?? "");
-
-            if (!seenCategories.has(categoryValue)) {
-                seenCategories.add(categoryValue);
-                this.categories.push(categoryValue);
-
-                // Build selection ID for this category
-                const selectionId = this.host.createSelectionIdBuilder()
-                    .withCategory(categoryColumn, i)
-                    .createSelectionId();
-
-                this.categorySelectionIds.set(categoryValue, selectionId);
-            }
-        }
     }
 
     private renderNoData(width: number, height: number): void {
         renderEmptyState(this.container, width, height, {
-            title: "Set up Streamgraph",
+            title: "Set up Bollinger Bands",
             lines: [
-                "X-Axis: Date / Period",
-                "Y-Axis: Category (layers)",
-                "Values: Measure (area size)",
-                "Legend (optional): Color by field"
+                "Date/Time: Date field for X-axis",
+                "Legend (optional): Split into series",
+                "Value: Numeric measure (e.g., closing price)"
             ],
-            hint: "Tip: Use Curve Smoothing and Opacity in the Format pane."
+            hint: "Tip: Adjust Period (N) and Std Deviations (K) in the Format pane."
         });
     }
 
@@ -198,34 +223,6 @@ export class Visual implements IVisual {
         }
     }
 
-    public enumerateObjectInstances(options: powerbi.EnumerateVisualObjectInstancesOptions): powerbi.VisualObjectInstanceEnumeration {
-        const objectName = options.objectName;
-        const instances: powerbi.VisualObjectInstance[] = [];
-
-        // Handle per-category Data Colors
-        if (objectName === "categoryColors" && this.categories.length > 0 && this.settings) {
-            const defaultColors = this.settings.useCustomColors && this.settings.customColors?.length > 0
-                ? this.settings.customColors
-                : getSchemeColors(this.settings.colorScheme);
-
-            this.categories.forEach((category, index) => {
-                const color = this.categoryColors.get(category) || defaultColors[index % defaultColors.length];
-                const selectionId = this.categorySelectionIds.get(category);
-
-                instances.push({
-                    objectName,
-                    displayName: category,
-                    properties: {
-                        fill: { solid: { color } }
-                    },
-                    selector: selectionId ? selectionId.getSelector() : null
-                });
-            });
-        }
-
-        return instances;
-    }
-
     public getFormattingModel(): powerbi.visuals.FormattingModel {
         const cards: powerbi.visuals.FormattingCard[] = [];
 
@@ -233,22 +230,9 @@ export class Visual implements IVisual {
             return { cards };
         }
 
-        if (this.categories.length > 0) {
-            const defaultColors = this.settings.useCustomColors && this.settings.customColors?.length > 0
-                ? this.settings.customColors
-                : getSchemeColors(this.settings.colorScheme);
-
-            cards.push(createDataColorsCard(
-                this.categories,
-                this.categorySelectionIds,
-                this.categoryColors,
-                defaultColors
-            ));
-        }
+        cards.push(createBollingerSettingsCard(this.settings.bollinger));
 
         cards.push(createTooltipCard(this.settings.tooltip));
-
-        cards.push(createColorSchemeCard(this.settings.colorScheme));
 
         cards.push(createLegendCard({
             position: this.settings.legendPosition,
@@ -273,8 +257,6 @@ export class Visual implements IVisual {
             legendFontSize: this.settings.textSizes.legendFontSize || this.settings.legendFontSize,
             panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize
         }));
-
-        cards.push(createStreamgraphSettingsCard(this.settings.streamgraph));
 
         return { cards };
     }

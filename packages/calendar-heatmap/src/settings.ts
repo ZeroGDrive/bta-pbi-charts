@@ -5,14 +5,12 @@ import DataView = powerbi.DataView;
 import {
     IBaseVisualSettings,
     ColorScheme,
-    LegendPosition,
     CellSize,
     WeekStart,
     colorSchemes,
     defaultSmallMultiplesSettings,
     defaultLegendSettings,
     defaultCustomColorSettings,
-    defaultFontScaleFactor,
     defaultTooltipSettings,
     TooltipStyle,
     TooltipTheme
@@ -30,7 +28,6 @@ export interface ICalendarTextSizeSettings {
     yearLabelFontSize: number;    // 0 = auto, 8-32 = manual
     monthLabelFontSize: number;   // 0 = auto, 8-32 = manual
     dayLabelFontSize: number;     // 0 = auto, 8-32 = manual (Y-axis day labels)
-    legendFontSize: number;       // 0 = auto, 8-32 = manual
     panelTitleFontSize: number;   // 0 = auto, 8-32 = manual
 }
 
@@ -41,8 +38,7 @@ export interface ICalendarVisualSettings extends IBaseVisualSettings {
 
 export const defaultSettings: ICalendarVisualSettings = {
     colorScheme: "greens",
-    showLegend: true,
-    legendPosition: "right",
+    legendPosition: "topRight",
     legendFontSize: defaultLegendSettings.legendFontSize!,
     maxLegendItems: defaultLegendSettings.maxLegendItems!,
     showXAxis: false,
@@ -50,8 +46,6 @@ export const defaultSettings: ICalendarVisualSettings = {
     showYAxis: true,
     yAxisFontSize: 8,
     rotateXLabels: "never",  // Calendar doesn't use X-axis rotation but needs the property
-    responsiveText: true,
-    fontScaleFactor: defaultFontScaleFactor,
     tooltip: { ...defaultTooltipSettings },
     useCustomColors: defaultCustomColorSettings.useCustomColors,
     customColors: [...defaultCustomColorSettings.customColors],
@@ -66,7 +60,6 @@ export const defaultSettings: ICalendarVisualSettings = {
         yearLabelFontSize: 0,
         monthLabelFontSize: 0,
         dayLabelFontSize: 0,
-        legendFontSize: 0,
         panelTitleFontSize: 0
     },
     smallMultiples: { ...defaultSmallMultiplesSettings }
@@ -90,24 +83,6 @@ export function parseSettings(dataView: DataView): ICalendarVisualSettings {
             settings.calendar.minColor = scheme.min;
             settings.calendar.maxColor = scheme.max;
         }
-    }
-
-    // Legend settings
-    const legendObj = objects["legend"];
-    if (legendObj) {
-        settings.showLegend = (legendObj["show"] as boolean) ?? defaultSettings.showLegend;
-        settings.legendPosition = (legendObj["position"] as LegendPosition) ?? defaultSettings.legendPosition;
-        settings.legendFontSize = (legendObj["fontSize"] as number) ?? defaultSettings.legendFontSize;
-        settings.maxLegendItems = (legendObj["maxItems"] as number) ?? defaultSettings.maxLegendItems;
-    }
-
-    // Responsive text setting (from general settings)
-    const generalObj = objects["general"];
-    if (generalObj) {
-        settings.responsiveText = (generalObj["responsiveText"] as boolean) ?? defaultSettings.responsiveText;
-        settings.fontScaleFactor = (generalObj["fontScaleFactor"] as number) ?? defaultSettings.fontScaleFactor;
-        // Clamp font scale factor between 0.5 and 2.0
-        settings.fontScaleFactor = Math.max(0.5, Math.min(2.0, settings.fontScaleFactor));
     }
 
     // Tooltip settings
@@ -181,14 +156,17 @@ export function parseSettings(dataView: DataView): ICalendarVisualSettings {
         settings.textSizes.yearLabelFontSize = (textSizesObj["yearLabelFontSize"] as number) ?? defaultSettings.textSizes.yearLabelFontSize;
         settings.textSizes.monthLabelFontSize = (textSizesObj["monthLabelFontSize"] as number) ?? defaultSettings.textSizes.monthLabelFontSize;
         settings.textSizes.dayLabelFontSize = (textSizesObj["dayLabelFontSize"] as number) ?? defaultSettings.textSizes.dayLabelFontSize;
-        settings.textSizes.legendFontSize = (textSizesObj["legendFontSize"] as number) ?? defaultSettings.textSizes.legendFontSize;
         settings.textSizes.panelTitleFontSize = (textSizesObj["panelTitleFontSize"] as number) ?? defaultSettings.textSizes.panelTitleFontSize;
-        // Clamp values (0 = auto, 8-32 = manual)
-        settings.textSizes.yearLabelFontSize = settings.textSizes.yearLabelFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.yearLabelFontSize));
-        settings.textSizes.monthLabelFontSize = settings.textSizes.monthLabelFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.monthLabelFontSize));
-        settings.textSizes.dayLabelFontSize = settings.textSizes.dayLabelFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.dayLabelFontSize));
-        settings.textSizes.legendFontSize = settings.textSizes.legendFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.legendFontSize));
-        settings.textSizes.panelTitleFontSize = settings.textSizes.panelTitleFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.panelTitleFontSize));
+        // Clamp values (0 = auto, otherwise 6-40)
+        const clampFontSize = (v: number): number => {
+            const n = Number(v);
+            if (!Number.isFinite(n) || n <= 0) return 0;
+            return Math.max(6, Math.min(40, n));
+        };
+        settings.textSizes.yearLabelFontSize = clampFontSize(settings.textSizes.yearLabelFontSize);
+        settings.textSizes.monthLabelFontSize = clampFontSize(settings.textSizes.monthLabelFontSize);
+        settings.textSizes.dayLabelFontSize = clampFontSize(settings.textSizes.dayLabelFontSize);
+        settings.textSizes.panelTitleFontSize = clampFontSize(settings.textSizes.panelTitleFontSize);
     }
 
     // Small Multiples settings

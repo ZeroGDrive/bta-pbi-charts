@@ -10,7 +10,6 @@ import {
     defaultSmallMultiplesSettings,
     defaultLegendSettings,
     defaultCustomColorSettings,
-    defaultFontScaleFactor,
     defaultTextSizeSettings,
     defaultTooltipSettings,
     TooltipStyle,
@@ -38,8 +37,7 @@ export interface IBumpChartVisualSettings extends IBaseVisualSettings {
 
 export const defaultSettings: IBumpChartVisualSettings = {
     colorScheme: "blues",
-    showLegend: true,
-    legendPosition: "top",
+    legendPosition: "topRight",
     legendFontSize: defaultLegendSettings.legendFontSize!,
     maxLegendItems: defaultLegendSettings.maxLegendItems!,
     showXAxis: true,
@@ -47,8 +45,6 @@ export const defaultSettings: IBumpChartVisualSettings = {
     showYAxis: true,
     yAxisFontSize: 11,
     rotateXLabels: "auto",
-    responsiveText: true,
-    fontScaleFactor: defaultFontScaleFactor,
     tooltip: { ...defaultTooltipSettings },
     useCustomColors: defaultCustomColorSettings.useCustomColors,
     customColors: [...defaultCustomColorSettings.customColors],
@@ -84,19 +80,9 @@ export function parseSettings(dataView: DataView): IBumpChartVisualSettings {
     // Legend settings
     const legendObj = objects["legend"];
     if (legendObj) {
-        settings.showLegend = (legendObj["show"] as boolean) ?? defaultSettings.showLegend;
         settings.legendPosition = (legendObj["position"] as LegendPosition) ?? defaultSettings.legendPosition;
         settings.legendFontSize = (legendObj["fontSize"] as number) ?? defaultSettings.legendFontSize;
         settings.maxLegendItems = (legendObj["maxItems"] as number) ?? defaultSettings.maxLegendItems;
-    }
-
-    // Responsive text setting (from general settings)
-    const generalObj = objects["general"];
-    if (generalObj) {
-        settings.responsiveText = (generalObj["responsiveText"] as boolean) ?? defaultSettings.responsiveText;
-        settings.fontScaleFactor = (generalObj["fontScaleFactor"] as number) ?? defaultSettings.fontScaleFactor;
-        // Clamp font scale factor between 0.5 and 2.0
-        settings.fontScaleFactor = Math.max(0.5, Math.min(2.0, settings.fontScaleFactor));
     }
 
     // Tooltip settings
@@ -163,12 +149,17 @@ export function parseSettings(dataView: DataView): IBumpChartVisualSettings {
         settings.textSizes.legendFontSize = (textSizesObj["legendFontSize"] as number) ?? defaultSettings.textSizes.legendFontSize;
         settings.textSizes.panelTitleFontSize = (textSizesObj["panelTitleFontSize"] as number) ?? defaultSettings.textSizes.panelTitleFontSize;
         settings.textSizes.endLabelFontSize = (textSizesObj["endLabelFontSize"] as number) ?? defaultSettings.textSizes.endLabelFontSize;
-        // Clamp values (0 = auto, 8-32 = manual)
-        settings.textSizes.xAxisFontSize = settings.textSizes.xAxisFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.xAxisFontSize));
-        settings.textSizes.yAxisFontSize = settings.textSizes.yAxisFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.yAxisFontSize));
-        settings.textSizes.legendFontSize = settings.textSizes.legendFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.legendFontSize));
-        settings.textSizes.panelTitleFontSize = settings.textSizes.panelTitleFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.panelTitleFontSize));
-        settings.textSizes.endLabelFontSize = settings.textSizes.endLabelFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.endLabelFontSize));
+        // Clamp values (0 = auto, otherwise 6-40)
+        const clampFontSize = (v: number): number => {
+            const n = Number(v);
+            if (!Number.isFinite(n) || n <= 0) return 0;
+            return Math.max(6, Math.min(40, n));
+        };
+        settings.textSizes.xAxisFontSize = clampFontSize(settings.textSizes.xAxisFontSize);
+        settings.textSizes.yAxisFontSize = clampFontSize(settings.textSizes.yAxisFontSize);
+        settings.textSizes.legendFontSize = clampFontSize(settings.textSizes.legendFontSize);
+        settings.textSizes.panelTitleFontSize = clampFontSize(settings.textSizes.panelTitleFontSize);
+        settings.textSizes.endLabelFontSize = clampFontSize(settings.textSizes.endLabelFontSize);
     }
 
     // Bump Chart settings

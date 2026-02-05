@@ -31,23 +31,22 @@ export class CalendarTransformer {
         let maxDate: Date | null = null;
 
         let xAxisIndex = -1;
-        let groupByIndex = -1;
 
         if (categorical.categories) {
             categorical.categories.forEach((cat, idx) => {
                 const role = cat.source.roles;
                 if (role) {
                     if (role["xAxis"]) xAxisIndex = idx;
-                    if (role["groupBy"]) groupByIndex = idx;
                 }
             });
         }
 
         const values = categorical.values?.[0]?.values || [];
+        const valueFormatString = (categorical.values?.[0]?.source as any)?.format as string | undefined;
 
         for (let i = 0; i < values.length; i++) {
             const rawXValue = xAxisIndex >= 0 ? categorical.categories![xAxisIndex].values[i] : null;
-            const groupValue = groupByIndex >= 0 ? String(categorical.categories![groupByIndex].values[i] ?? "") : "All";
+            const groupValue = "All";
             const value = Number(values[i]) || 0;
 
             // Parse date from x-axis value
@@ -99,6 +98,7 @@ export class CalendarTransformer {
             minValue,
             calendarPoints,
             years,
+            valueFormatString,
             dateRange: {
                 start: minDate || new Date(),
                 end: maxDate || new Date()

@@ -1,7 +1,7 @@
 "use strict";
 
 import * as d3 from "d3";
-import { BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel } from "@pbi-visuals/shared";
+import { BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
 import { IStreamgraphVisualSettings } from "./settings";
 import { StreamgraphData } from "./StreamgraphTransformer";
 
@@ -20,9 +20,24 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
         }
 
         const { xValues, yValues, groups, stackedData } = streamData;
+        const legendCategories = streamData.hasLegendRoleData ? yValues : [];
 
-        // Streamgraph doesn't render a Y-axis yet; avoid reserving empty left space.
-        const leftMargin = 20;
+        const yAxisFontSize = this.getEffectiveFontSize(
+            settings.textSizes.yAxisFontSize > 0 ? settings.textSizes.yAxisFontSize : settings.yAxisFontSize,
+            6,
+            40
+        );
+
+        const formatTick = (v: number): string => formatMeasureValue(v, streamData.valueFormatString);
+
+        // Reserve space for Y-axis tick labels when enabled (native-like)
+        let leftMargin = 20;
+        if (settings.showYAxis) {
+            const maxSum = d3.max(xValues, x => d3.sum(yValues, y => stackedData.get(y)?.get(x) ?? 0)) ?? 0;
+            const candidates = [0, maxSum / 2, maxSum, -maxSum / 2, -maxSum].map(formatTick);
+            const width = measureMaxLabelWidth([...new Set(candidates)], yAxisFontSize, "Segoe UI, sans-serif");
+            leftMargin = Math.min(90, Math.max(32, Math.ceil(width + 14)));
+        }
 
         const formatXLabel = (val: string): string => {
             const date = new Date(val);
@@ -33,11 +48,13 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
         };
         const xDisplayLabels = xValues.map(formatXLabel);
 
+        const legendReserve = this.getLegendReservation({ isOrdinal: true, categories: legendCategories });
+
         const margin = {
-            top: 40,
-            right: 20,
-            bottom: settings.showXAxis ? 70 : (settings.showLegend ? 60 : 20),
-            left: leftMargin
+            top: 12 + legendReserve.top,
+            right: 12 + legendReserve.right,
+            bottom: (settings.showXAxis ? 45 : 12) + legendReserve.bottom,
+            left: leftMargin + legendReserve.left
         };
 
         const groupCount = groups.length;
@@ -59,11 +76,9 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
             // Group title with configurable spacing
             if (settings.smallMultiples.showTitle && groupName !== "All") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
-                const titleFontSize = this.getEffectiveFontSize(
-                    settings.textSizes.panelTitleFontSize,
-                    settings.smallMultiples.titleFontSize,
-                    10, 24
-                );
+                const titleBase = settings.smallMultiples.titleFontSize;
+                const titleRequested = settings.textSizes.panelTitleFontSize > 0 ? settings.textSizes.panelTitleFontSize : titleBase;
+                const titleFontSize = this.getEffectiveFontSize(titleRequested, 6, 40);
                 const displayTitle = formatLabel(groupName, chartWidth, titleFontSize);
                 const title = panelGroup.append("text")
                     .attr("class", "panel-title")
@@ -90,9 +105,10 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
             });
 
             // X scale
+            const xInset = Math.max(4, Math.min(16, chartWidth * 0.02));
             const xScale = d3.scaleLinear()
                 .domain([0, xValues.length - 1])
-                .range([0, chartWidth]);
+                .range([xInset, Math.max(xInset, chartWidth - xInset)]);
 
             // Stack generator with wiggle offset
             const stack = d3.stack<Record<string, number>>()
@@ -115,6 +131,25 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
             const yScale = d3.scaleLinear()
                 .domain([yMin, yMax])
                 .range([groupHeight, 0]);
+
+            // Y-axis ticks
+            if (settings.showYAxis) {
+                const yAxisGroup = panelGroup.append("g")
+                    .attr("class", "y-axis");
+
+                const ticks = yScale.ticks(5);
+                ticks.forEach(tick => {
+                    const y = Math.round(yScale(tick));
+                    yAxisGroup.append("text")
+                        .attr("x", -8)
+                        .attr("y", y)
+                        .attr("dy", "0.32em")
+                        .attr("text-anchor", "end")
+                        .attr("font-size", `${yAxisFontSize}px`)
+                        .attr("fill", "#666")
+                        .text(formatTick(tick));
+                });
+            }
 
             // Color scale
             const colorScale = this.getCategoryColors(groupYValues, streamData.categoryColorMap);
@@ -155,7 +190,7 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                         return {
                             meta: { title: category, subtitle: xDisplayLabels[index], color: categoryColor },
                             tooltipData: [
-                                { displayName: "Value", value: rawValue.toLocaleString() },
+                                { displayName: "Value", value: formatMeasureValue(rawValue, streamData.valueFormatString) },
                                 ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
                             ]
                         };
@@ -175,9 +210,9 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                     .attr("transform", `translate(0, ${Math.round(groupHeight)})`);
 
                 const xAxisFontSize = this.getEffectiveFontSize(
-                    settings.textSizes.xAxisFontSize,
-                    settings.xAxisFontSize,
-                    8, 18
+                    settings.textSizes.xAxisFontSize > 0 ? settings.textSizes.xAxisFontSize : settings.xAxisFontSize,
+                    6,
+                    40
                 );
 
                 // Smart rotation detection
@@ -216,7 +251,8 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                             .attr("transform", `rotate(-45, ${x}, 5)`)
                             .attr("text-anchor", "end");
                     } else {
-                        text.attr("text-anchor", "middle");
+                        const anchor = i === 0 ? "start" : (i === xValues.length - 1 ? "end" : "middle");
+                        text.attr("text-anchor", anchor);
                     }
                 });
             }
@@ -225,9 +261,16 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
         });
 
         // Legend
-        if (settings.showLegend) {
+        if (streamData.hasLegendRoleData) {
             const categoryColors = this.getCategoryColors(yValues, streamData.categoryColorMap);
-            this.renderLegend(categoryColors, data.maxValue, true, yValues);
+            this.renderLegend(categoryColors, data.maxValue, true, yValues, undefined, undefined, {
+                alignFrame: {
+                    x: margin.left,
+                    y: margin.top,
+                    width: chartWidth,
+                    height: Math.max(0, this.context.height - margin.top - margin.bottom)
+                }
+            });
         }
     }
 }

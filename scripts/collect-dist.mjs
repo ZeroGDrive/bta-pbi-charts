@@ -25,7 +25,8 @@ const prettyNames = {
     "heatmap": "BTA-Heatmap.pbiviz",
     "packed-bubble": "BTA-Packed-Bubble.pbiviz",
     "streamgraph": "BTA-Streamgraph.pbiviz",
-    "donut-chart": "BTA-Donut-Chart.pbiviz"
+    "donut-chart": "BTA-Donut-Chart.pbiviz",
+    "bollinger-bands": "BTA-Bollinger-Bands.pbiviz"
 };
 
 let copied = 0;

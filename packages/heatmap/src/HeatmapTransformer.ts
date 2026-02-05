@@ -104,13 +104,12 @@ function getNodeRoleParts(
     node: DataViewMatrixNode,
     levels: DataViewHierarchyLevel[],
     fallbackIndex: number
-): { groupByParts: string[]; yAxisParts: string[]; xAxisParts: string[] } {
-    const groupByParts: string[] = [];
+): { yAxisParts: string[]; xAxisParts: string[] } {
     const yAxisParts: string[] = [];
     const xAxisParts: string[] = [];
 
     if (node.level === undefined || node.level === null) {
-        return { groupByParts, yAxisParts, xAxisParts };
+        return { yAxisParts, xAxisParts };
     }
 
     const level = levels[node.level];
@@ -121,12 +120,11 @@ function getNodeRoleParts(
         const roles = source?.roles ?? {};
         const label = valueToLabel(lv.value, fallbackIndex);
 
-        if (roles["groupBy"]) groupByParts.push(label);
         if (roles["yAxis"]) yAxisParts.push(label);
         if (roles["xAxis"]) xAxisParts.push(label);
     }
 
-    return { groupByParts, yAxisParts, xAxisParts };
+    return { yAxisParts, xAxisParts };
 }
 
 function traverseMatrix(
@@ -207,6 +205,7 @@ export class HeatmapTransformer {
         let minValue = Infinity;
 
         const measureCount = Math.max(1, matrix.valueSources?.length ?? 1);
+        const valueFormatString = (matrix.valueSources?.[0] as any)?.format as string | undefined;
 
         // ---- Columns (X axis) ----
         const xLeafKeys: string[] = [];
@@ -227,7 +226,7 @@ export class HeatmapTransformer {
             }
             const xParts: string[] = [];
             const sortParts: SortValue[] = [];
-            path.forEach((p, depthIndex) => {
+            path.forEach((p) => {
                 const parts = getNodeRoleParts(p, matrix.columns.levels, colLeafIndex);
                 // Each node can hold composite values; join to a single label per level.
                 const raw = (p.levelValues?.[0] as any)?.value;
@@ -293,14 +292,11 @@ export class HeatmapTransformer {
 
         const xAxis = buildAxisHierarchyFromLeafPaths(xLeafKeys, xLeafPaths);
 
-        // ---- Rows (Group By + Y axis) ----
-        const groupNames: string[] = [];
+        // ---- Rows (Y axis) ----
+        const groupNames: string[] = ["All"];
         const yAxisByGroup = new Map<string, AxisHierarchy>();
-        const groupByPresent = matrix.rows.levels.some(l =>
-            (l.sources ?? []).some(s => Boolean(s.roles?.["groupBy"]))
-        );
 
-        const rowsByGroup = new Map<string, { leafKeys: string[]; leafPaths: string[][]; leafNodes: DataViewMatrixNode[] }>();
+        const rowsBucket: { leafKeys: string[]; leafPaths: string[][]; leafNodes: DataViewMatrixNode[] } = { leafKeys: [], leafPaths: [], leafNodes: [] };
 
         let rowLeafGlobalCounter = 0;
 
@@ -309,17 +305,11 @@ export class HeatmapTransformer {
                 return;
             }
 
-            let groupName = "All";
             const yParts: string[] = [];
 
             // Build role-based parts across the path.
-            path.forEach((p, idx) => {
+            path.forEach((p) => {
                 const parts = getNodeRoleParts(p, matrix.rows.levels, rowLeafGlobalCounter);
-                if (parts.groupByParts.length) {
-                    // If multiple groupBy parts appear (composite), join them.
-                    groupName = parts.groupByParts.join(" • ");
-                    return;
-                }
                 if (parts.yAxisParts.length) {
                     yParts.push(parts.yAxisParts.join(" • "));
                     return;
@@ -329,33 +319,19 @@ export class HeatmapTransformer {
                 const fallback = valueToLabel((p.levelValues?.[0] as any)?.value, rowLeafGlobalCounter);
                 if (!fallback) return;
 
-                // If Group By is present and this is the first level, treat it as the panel group.
-                if (groupByPresent && idx === 0) {
-                    groupName = fallback;
-                    return;
-                }
-
                 yParts.push(fallback);
             });
 
             const yKey = yParts.join(KEY_SEP) || `row${rowLeafGlobalCounter}`;
-            const bucket = rowsByGroup.get(groupName) ?? { leafKeys: [], leafPaths: [], leafNodes: [] };
-            bucket.leafKeys.push(yKey);
-            bucket.leafPaths.push(yParts);
-            bucket.leafNodes.push(n);
-            rowsByGroup.set(groupName, bucket);
+            rowsBucket.leafKeys.push(yKey);
+            rowsBucket.leafPaths.push(yParts);
+            rowsBucket.leafNodes.push(n);
 
             rowLeafGlobalCounter++;
         });
 
-        // If we didn't actually see groupBy nodes, collapse back to a single group.
-        if (!groupByPresent) {
-            const all = rowsByGroup.get("All");
-            rowsByGroup.clear();
-            rowsByGroup.set("All", all ?? { leafKeys: [], leafPaths: [], leafNodes: [] });
-        }
-
-        groupNames.push(...Array.from(rowsByGroup.keys()));
+        const rowsByGroup = new Map<string, { leafKeys: string[]; leafPaths: string[][]; leafNodes: DataViewMatrixNode[] }>();
+        rowsByGroup.set("All", rowsBucket);
 
         // ---- Values ----
         let dataPointIndex = 0;
@@ -409,7 +385,8 @@ export class HeatmapTransformer {
             maxValue,
             minValue,
             xAxis,
-            yAxisByGroup
+            yAxisByGroup,
+            valueFormatString
         };
     }
 }

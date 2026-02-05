@@ -17,9 +17,7 @@ import {
     createDataColorsCard,
     createDonutLabelsCard,
     createDonutSettingsCard,
-    createGeneralCard,
     createLegendCard,
-    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     findCategoryIndex,
@@ -79,6 +77,12 @@ export class Visual implements IVisual {
 
         this.svg.attr("width", width).attr("height", height);
 
+        // Hide tooltip when mouse leaves the chart entirely
+        this.svg.on("mouseleave", () => {
+            this.htmlTooltip?.hide();
+            this.host.tooltipService.hide({ immediately: true, isTouchEvent: false });
+        });
+
         if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].categorical) {
             this.renderNoData(width, height);
             return;
@@ -88,7 +92,7 @@ export class Visual implements IVisual {
         this.settings = parseSettings(dataView);
         this.syncHtmlTooltip();
 
-        this.categoryFieldIndex = findCategoryIndex(dataView, "category");
+        this.categoryFieldIndex = findCategoryIndex(dataView, "legend");
         this.buildCategorySelectionIds(dataView);
         this.categoryColors = readCategoryColorsFromDataView(dataView, this.categoryFieldIndex);
 
@@ -144,9 +148,8 @@ export class Visual implements IVisual {
         renderEmptyState(this.container, width, height, {
             title: "Set up Donut Chart",
             lines: [
-                "Category: Slice labels",
-                "Values: Measure (slice size)",
-                "Group By (optional): Small multiples panels"
+                "Legend: Slice labels",
+                "Values: Measure (slice size)"
             ],
             hint: "Tip: Use the Tooltips and Data Labels cards for a polished experience."
         });
@@ -191,29 +194,27 @@ export class Visual implements IVisual {
             ));
         }
 
-        cards.push(createGeneralCard({
-            responsiveText: this.settings.responsiveText,
-            fontScaleFactor: this.settings.fontScaleFactor
-        }));
-
         cards.push(createTooltipCard(this.settings.tooltip));
 
         cards.push(createColorSchemeCard(this.settings.colorScheme));
 
         cards.push(createLegendCard({
-            show: this.settings.showLegend,
             position: this.settings.legendPosition,
             fontSize: this.settings.legendFontSize,
             maxItems: this.settings.maxLegendItems
         }));
 
-        cards.push(createTextSizesCard(this.settings.textSizes));
+        cards.push(createTextSizesCard({
+            legendFontSize: this.settings.textSizes.legendFontSize || this.settings.legendFontSize,
+            panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize,
+            sliceLabelFontSize: this.settings.textSizes.sliceLabelFontSize || 11,
+            centerLabelFontSize: this.settings.textSizes.centerLabelFontSize || 11,
+            centerValueFontSize: this.settings.textSizes.centerValueFontSize || 20
+        }));
 
         cards.push(createDonutSettingsCard(this.settings.donut));
 
         cards.push(createDonutLabelsCard(this.settings.donutLabels));
-
-        cards.push(createSmallMultiplesCard(this.settings.smallMultiples));
 
         return { cards };
     }

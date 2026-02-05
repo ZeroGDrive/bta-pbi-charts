@@ -9,6 +9,7 @@ export interface BubbleNode {
     value: number;
     radius: number;
     groupValue: string;
+    legendKey: string;
     index: number;
     x?: number;
     y?: number;
@@ -17,10 +18,13 @@ export interface BubbleNode {
 export interface BubbleData {
     nodes: BubbleNode[];
     categories: string[];
+    legendItems: string[];
     groups: string[];
     maxValue: number;
     minValue: number;
     categoryColorMap?: Map<string, string>;
+    hasLegendRoleData: boolean;
+    valueFormatString?: string;
 }
 
 export class BubbleTransformer {
@@ -28,11 +32,11 @@ export class BubbleTransformer {
         const nodes: BubbleNode[] = [];
         const categoriesSet = new Set<string>();
         const groupsSet = new Set<string>();
+        const legendItemsSet = new Set<string>();
         let maxValue = 0;
         let minValue = Infinity;
 
         let yAxisIndex = -1;
-        let groupByIndex = -1;
         let legendIndex = -1;
 
         if (categorical.categories) {
@@ -40,13 +44,13 @@ export class BubbleTransformer {
                 const role = cat.source.roles;
                 if (role) {
                     if (role["yAxis"]) yAxisIndex = idx;
-                    if (role["groupBy"]) groupByIndex = idx;
                     if (role["legend"]) legendIndex = idx;
                 }
             });
         }
 
         const values = categorical.values?.[0]?.values || [];
+        const valueFormatString = (categorical.values?.[0]?.source as any)?.format as string | undefined;
 
         for (let i = 0; i < values.length; i++) {
             // Use yAxis for category (bubble grouping), fallback to legend if no yAxis
@@ -54,9 +58,9 @@ export class BubbleTransformer {
             const category = categorySource >= 0
                 ? String(categorical.categories![categorySource].values[i] ?? "")
                 : "All";
-            const groupValue = groupByIndex >= 0
-                ? String(categorical.categories![groupByIndex].values[i] ?? "")
-                : "All";
+            const groupValue = "All";
+            const legendKeyRaw = legendIndex >= 0 ? categorical.categories![legendIndex].values[i] : null;
+            const legendKey = legendIndex >= 0 ? String(legendKeyRaw ?? "") : "All";
             const value = Number(values[i]) || 0;
 
             if (value > 0) {
@@ -65,6 +69,9 @@ export class BubbleTransformer {
 
                 categoriesSet.add(category);
                 groupsSet.add(groupValue);
+                if (legendIndex >= 0 && legendKey) {
+                    legendItemsSet.add(legendKey);
+                }
 
                 nodes.push({
                     id: `bubble-${i}`,
@@ -72,16 +79,19 @@ export class BubbleTransformer {
                     value,
                     radius: 0, // Will be calculated based on scale
                     groupValue,
+                    legendKey: legendKey || "All",
                     index: i
                 });
             }
         }
 
         const categories = Array.from(categoriesSet).sort();
+        const legendItems = Array.from(legendItemsSet).sort();
         const groups = Array.from(groupsSet).sort();
 
         if (minValue === Infinity) minValue = 0;
 
-        return { nodes, categories, groups, maxValue, minValue };
+        const hasLegendRoleData = legendIndex >= 0 && legendItems.length > 0;
+        return { nodes, categories, legendItems, groups, maxValue, minValue, hasLegendRoleData, valueFormatString };
     }
 }

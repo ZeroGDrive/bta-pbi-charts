@@ -13,6 +13,7 @@ export interface TooltipMeta {
 export interface TooltipRow {
     label: string;
     value: string;
+    color?: string;
 }
 
 export interface TooltipContent {
@@ -23,7 +24,8 @@ export interface TooltipContent {
 export function toTooltipRows(items: VisualTooltipDataItem[]): TooltipRow[] {
     return items.map(i => ({
         label: String(i.displayName ?? ""),
-        value: String(i.value ?? "")
+        value: String(i.value ?? ""),
+        color: (i as any).color ? String((i as any).color) : undefined
     }));
 }
 
@@ -152,7 +154,8 @@ export class HtmlTooltip {
 
     private render(content: TooltipContent): void {
         const { meta, rows } = content;
-        const showSwatch = this.settings.showColorSwatch && !!meta?.color;
+        const showRowSwatches = this.settings.showColorSwatch && rows.some(r => !!r.color);
+        const showSwatch = this.settings.showColorSwatch && !!meta?.color && !showRowSwatches;
 
         this.el.replaceChildren();
 
@@ -206,12 +209,23 @@ export class HtmlTooltip {
         if (rows.length) {
             const table = document.createElement("div");
             table.style.display = "grid";
-            table.style.gridTemplateColumns = "1fr auto";
+            table.style.gridTemplateColumns = showRowSwatches ? "auto 1fr auto" : "1fr auto";
             table.style.columnGap = "12px";
             table.style.rowGap = "6px";
             table.style.alignItems = "baseline";
 
             for (const r of rows) {
+                if (showRowSwatches) {
+                    const sw = document.createElement("div");
+                    sw.style.width = "10px";
+                    sw.style.height = "10px";
+                    sw.style.borderRadius = "3px";
+                    sw.style.marginTop = "1px";
+                    sw.style.background = r.color ? r.color : "transparent";
+                    sw.style.border = r.color ? "1px solid rgba(0,0,0,0.08)" : "1px solid transparent";
+                    table.appendChild(sw);
+                }
+
                 const k = document.createElement("div");
                 k.textContent = r.label;
                 k.style.opacity = "0.78";

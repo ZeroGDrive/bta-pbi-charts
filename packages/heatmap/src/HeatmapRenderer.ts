@@ -1,7 +1,7 @@
 "use strict";
 
 import * as d3 from "d3";
-import { BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, measureMaxLabelWidth } from "@pbi-visuals/shared";
+import { BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
 import { IHeatmapVisualSettings } from "./settings";
 import { AxisHierarchy, HeatmapMatrixData } from "./HeatmapTransformer";
 
@@ -39,14 +39,12 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
         const xLeafKeys = xAxis.leafKeys;
 
         const yAxisFontSize = this.getEffectiveFontSize(
-            settings.textSizes.yAxisFontSize,
-            settings.yAxisFontSize,
-            8, 18
+            settings.textSizes.yAxisFontSize || settings.yAxisFontSize,
+            6, 40
         );
         const xAxisFontSize = this.getEffectiveFontSize(
-            settings.textSizes.xAxisFontSize,
-            settings.xAxisFontSize,
-            8, 18
+            settings.textSizes.xAxisFontSize || settings.xAxisFontSize,
+            6, 40
         );
 
         const headerGap = 8;
@@ -63,18 +61,16 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
             )
             : 0;
 
-        const legendNeedsBottomSpace = settings.showLegend && settings.legendPosition === "bottom";
-
-        const topLegendPadding = settings.showLegend && settings.legendPosition !== "bottom" ? 36 : 0;
+        const legendReserve = { top: 0, right: 0, bottom: 0, left: 0 };
 
         const xAxisLineHeight = Math.max(10, Math.round(xAxisFontSize * 1.15));
         const xAxisHierarchyHeight = settings.showXAxis ? (xAxis.depth * xAxisLineHeight + 18) : 0;
 
         const margin = {
-            top: 40 + topLegendPadding + settings.heatmap.marginTop,
-            right: 20 + settings.heatmap.marginRight,
-            bottom: (legendNeedsBottomSpace ? 60 : 20) + xAxisHierarchyHeight + settings.heatmap.marginBottom,
-            left: 20 + settings.heatmap.marginLeft
+            top: 12 + legendReserve.top + settings.heatmap.marginTop,
+            right: 12 + legendReserve.right + settings.heatmap.marginRight,
+            bottom: 12 + legendReserve.bottom + xAxisHierarchyHeight + settings.heatmap.marginBottom,
+            left: 12 + legendReserve.left + settings.heatmap.marginLeft
         };
 
         const chartWidth = this.context.width - margin.left - margin.right;
@@ -136,9 +132,8 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
             if (settings.smallMultiples.showTitle && groupName !== "All") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleFontSize = this.getEffectiveFontSize(
-                    settings.textSizes.panelTitleFontSize,
-                    settings.smallMultiples.titleFontSize,
-                    10, 24
+                    settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
+                    6, 40
                 );
                 const displayTitle = formatLabel(groupName, chartWidth, titleFontSize);
                 const title = panelGroup.append("text")
@@ -203,7 +198,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                     const xDisplay = xPath.join(" • ");
 
                     this.addTooltip(cell as any, [
-                        { displayName: "Value", value: value.toLocaleString() },
+                        { displayName: "Value", value: formatMeasureValue(value, heatmapData.valueFormatString) },
                         { displayName: "Row", value: yDisplay },
                         { displayName: "Column", value: xDisplay },
                         ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
@@ -227,7 +222,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                             .attr("font-weight", "600")
                             .attr("fill", textColor)
                             .attr("pointer-events", "none")
-                            .text(String(value));
+                            .text(formatMeasureValue(value, heatmapData.valueFormatString));
                     }
                 }
             }
@@ -330,10 +325,6 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
             currentY += groupHeight + settings.smallMultiples.spacing;
         });
 
-        // Color legend with custom gradient colors
-        this.renderLegend(colorScale, maxValue, false, undefined, undefined, {
-            min: settings.heatmap.minColor,
-            max: settings.heatmap.maxColor
-        });
+        // Heatmap has no legend by design (tooltips carry the details).
     }
 }

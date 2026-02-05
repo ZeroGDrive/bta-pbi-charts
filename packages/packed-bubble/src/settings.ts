@@ -9,7 +9,6 @@ import {
     defaultSmallMultiplesSettings,
     defaultLegendSettings,
     defaultCustomColorSettings,
-    defaultFontScaleFactor,
     defaultTooltipSettings,
     TooltipStyle,
     TooltipTheme
@@ -38,8 +37,7 @@ export interface IBubbleVisualSettings extends IBaseVisualSettings {
 
 export const defaultSettings: IBubbleVisualSettings = {
     colorScheme: "blues",
-    showLegend: true,
-    legendPosition: "right",
+    legendPosition: "topRight",
     legendFontSize: defaultLegendSettings.legendFontSize!,
     maxLegendItems: defaultLegendSettings.maxLegendItems!,
     showXAxis: false,
@@ -47,8 +45,6 @@ export const defaultSettings: IBubbleVisualSettings = {
     showYAxis: false,
     yAxisFontSize: 11,
     rotateXLabels: "never",  // Packed bubble doesn't use X-axis but needs the property
-    responsiveText: true,
-    fontScaleFactor: defaultFontScaleFactor,
     tooltip: { ...defaultTooltipSettings },
     useCustomColors: defaultCustomColorSettings.useCustomColors,
     customColors: [...defaultCustomColorSettings.customColors],
@@ -86,19 +82,9 @@ export function parseSettings(dataView: DataView): IBubbleVisualSettings {
     // Legend settings
     const legendObj = objects["legend"];
     if (legendObj) {
-        settings.showLegend = (legendObj["show"] as boolean) ?? defaultSettings.showLegend;
         settings.legendPosition = (legendObj["position"] as LegendPosition) ?? defaultSettings.legendPosition;
         settings.legendFontSize = (legendObj["fontSize"] as number) ?? defaultSettings.legendFontSize;
         settings.maxLegendItems = (legendObj["maxItems"] as number) ?? defaultSettings.maxLegendItems;
-    }
-
-    // Responsive text setting (from general settings)
-    const generalObj = objects["general"];
-    if (generalObj) {
-        settings.responsiveText = (generalObj["responsiveText"] as boolean) ?? defaultSettings.responsiveText;
-        settings.fontScaleFactor = (generalObj["fontScaleFactor"] as number) ?? defaultSettings.fontScaleFactor;
-        // Clamp font scale factor between 0.5 and 2.0
-        settings.fontScaleFactor = Math.max(0.5, Math.min(2.0, settings.fontScaleFactor));
     }
 
     // Tooltip settings
@@ -165,9 +151,14 @@ export function parseSettings(dataView: DataView): IBubbleVisualSettings {
     if (textSizesObj) {
         settings.textSizes.legendFontSize = (textSizesObj["legendFontSize"] as number) ?? defaultSettings.textSizes.legendFontSize;
         settings.textSizes.panelTitleFontSize = (textSizesObj["panelTitleFontSize"] as number) ?? defaultSettings.textSizes.panelTitleFontSize;
-        // Clamp values (0 = auto, 8-32 = manual)
-        settings.textSizes.legendFontSize = settings.textSizes.legendFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.legendFontSize));
-        settings.textSizes.panelTitleFontSize = settings.textSizes.panelTitleFontSize === 0 ? 0 : Math.max(8, Math.min(32, settings.textSizes.panelTitleFontSize));
+        // Clamp values (0 = auto, otherwise 6-40)
+        const clampFontSize = (v: number): number => {
+            const n = Number(v);
+            if (!Number.isFinite(n) || n <= 0) return 0;
+            return Math.max(6, Math.min(40, n));
+        };
+        settings.textSizes.legendFontSize = clampFontSize(settings.textSizes.legendFontSize);
+        settings.textSizes.panelTitleFontSize = clampFontSize(settings.textSizes.panelTitleFontSize);
     }
 
     // Small Multiples settings

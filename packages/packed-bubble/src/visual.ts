@@ -16,9 +16,7 @@ import {
     createBubbleSettingsCard,
     createColorSchemeCard,
     createDataColorsCard,
-    createGeneralCard,
     createLegendCard,
-    createSmallMultiplesCard,
     createTextSizesCard,
     createTooltipCard,
     findCategoryIndex,
@@ -78,6 +76,12 @@ export class Visual implements IVisual {
         const height = options.viewport.height;
 
         this.svg.attr("width", width).attr("height", height);
+
+        // Hide tooltip when mouse leaves the chart entirely
+        this.svg.on("mouseleave", () => {
+            this.htmlTooltip?.hide();
+            this.host.tooltipService.hide({ immediately: true, isTouchEvent: false });
+        });
 
         // Validate data
         if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].categorical) {
@@ -164,8 +168,7 @@ export class Visual implements IVisual {
             lines: [
                 "Category: Bubble group (color/labels)",
                 "Values: Measure (bubble size)",
-                "Legend (optional): Color by field",
-                "Group By (optional): Small multiples panels"
+                "Legend (optional): Color by field"
             ],
             hint: "Tip: Enable clustering in the Format pane for grouped layouts."
         });
@@ -238,27 +241,22 @@ export class Visual implements IVisual {
             ));
         }
 
-        cards.push(createGeneralCard({
-            responsiveText: this.settings.responsiveText,
-            fontScaleFactor: this.settings.fontScaleFactor
-        }));
-
         cards.push(createTooltipCard(this.settings.tooltip));
 
         cards.push(createColorSchemeCard(this.settings.colorScheme));
 
         cards.push(createLegendCard({
-            show: this.settings.showLegend,
             position: this.settings.legendPosition,
             fontSize: this.settings.legendFontSize,
             maxItems: this.settings.maxLegendItems
         }));
 
-        cards.push(createTextSizesCard(this.settings.textSizes));
+        cards.push(createTextSizesCard({
+            legendFontSize: this.settings.textSizes.legendFontSize || this.settings.legendFontSize,
+            panelTitleFontSize: this.settings.textSizes.panelTitleFontSize || this.settings.smallMultiples.titleFontSize
+        }));
 
         cards.push(createBubbleSettingsCard(this.settings.bubble));
-
-        cards.push(createSmallMultiplesCard(this.settings.smallMultiples));
 
         return { cards };
     }

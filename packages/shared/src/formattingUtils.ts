@@ -190,6 +190,13 @@ export function createTextSizesCard(settings: {
     dayLabelFontSize?: number;
 }): powerbi.visuals.FormattingCard {
     const slices: powerbi.visuals.FormattingSlice[] = [];
+    const fontSizeOptions = (min: number, max: number): powerbi.visuals.NumUpDownFormat => ({
+        minValue: { type: powerbi.visuals.ValidatorType.Min, value: min },
+        maxValue: { type: powerbi.visuals.ValidatorType.Max, value: max }
+    });
+
+    const standardFontOptions = fontSizeOptions(6, 40);
+    const largeFontOptions = fontSizeOptions(6, 120);
 
     if (settings.xAxisFontSize !== undefined) {
         slices.push({
@@ -199,7 +206,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "xAxisFontSize" },
-                    value: settings.xAxisFontSize
+                    value: settings.xAxisFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -213,7 +221,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "yAxisFontSize" },
-                    value: settings.yAxisFontSize
+                    value: settings.yAxisFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -227,7 +236,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "legendFontSize" },
-                    value: settings.legendFontSize
+                    value: settings.legendFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -241,7 +251,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "panelTitleFontSize" },
-                    value: settings.panelTitleFontSize
+                    value: settings.panelTitleFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -255,7 +266,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "endLabelFontSize" },
-                    value: settings.endLabelFontSize
+                    value: settings.endLabelFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -269,7 +281,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "valueLabelFontSize" },
-                    value: settings.valueLabelFontSize
+                    value: settings.valueLabelFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -283,7 +296,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "sliceLabelFontSize" },
-                    value: settings.sliceLabelFontSize
+                    value: settings.sliceLabelFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -297,7 +311,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "centerLabelFontSize" },
-                    value: settings.centerLabelFontSize
+                    value: settings.centerLabelFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -311,7 +326,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "centerValueFontSize" },
-                    value: settings.centerValueFontSize
+                    value: settings.centerValueFontSize,
+                    options: largeFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -325,7 +341,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "yearLabelFontSize" },
-                    value: settings.yearLabelFontSize
+                    value: settings.yearLabelFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -339,7 +356,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "monthLabelFontSize" },
-                    value: settings.monthLabelFontSize
+                    value: settings.monthLabelFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -353,7 +371,8 @@ export function createTextSizesCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "textSizes", propertyName: "dayLabelFontSize" },
-                    value: settings.dayLabelFontSize
+                    value: settings.dayLabelFontSize,
+                    options: standardFontOptions
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -400,7 +419,11 @@ export function createXAxisCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "xAxisSettings", propertyName: "fontSize" },
-                    value: settings.fontSize
+                    value: settings.fontSize,
+                    options: {
+                        minValue: { type: powerbi.visuals.ValidatorType.Min, value: 6 },
+                        maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 40 }
+                    }
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -460,7 +483,11 @@ export function createYAxisCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "yAxisSettings", propertyName: "fontSize" },
-                    value: settings.fontSize
+                    value: settings.fontSize,
+                    options: {
+                        minValue: { type: powerbi.visuals.ValidatorType.Min, value: 6 },
+                        maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 40 }
+                    }
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -478,27 +505,14 @@ export function createYAxisCard(settings: {
 }
 
 /**
- * Creates a Legend formatting card
+ * Creates a Legend formatting card (without show toggle - legend visibility is data-driven)
  */
 export function createLegendCard(settings: {
-    show: boolean;
     position?: string;
     fontSize?: number;
     maxItems?: number;
 }): powerbi.visuals.FormattingCard {
-    const slices: powerbi.visuals.FormattingSlice[] = [
-        {
-            uid: "legend_show",
-            displayName: "Show Legend",
-            control: {
-                type: powerbi.visuals.FormattingComponent.ToggleSwitch,
-                properties: {
-                    descriptor: { objectName: "legend", propertyName: "show" },
-                    value: settings.show
-                }
-            }
-        } as powerbi.visuals.FormattingSlice
-    ];
+    const slices: powerbi.visuals.FormattingSlice[] = [];
 
     if (settings.position !== undefined) {
         slices.push({
@@ -522,7 +536,11 @@ export function createLegendCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "legend", propertyName: "fontSize" },
-                    value: settings.fontSize
+                    value: settings.fontSize,
+                    options: {
+                        minValue: { type: powerbi.visuals.ValidatorType.Min, value: 6 },
+                        maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 40 }
+                    }
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -536,7 +554,11 @@ export function createLegendCard(settings: {
                 type: powerbi.visuals.FormattingComponent.NumUpDown,
                 properties: {
                     descriptor: { objectName: "legend", propertyName: "maxItems" },
-                    value: settings.maxItems
+                    value: settings.maxItems,
+                    options: {
+                        minValue: { type: powerbi.visuals.ValidatorType.Min, value: 1 },
+                        maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 50 }
+                    }
                 }
             }
         } as powerbi.visuals.FormattingSlice);
@@ -671,53 +693,6 @@ export function createColorSchemeCard(currentScheme: ColorScheme): powerbi.visua
     };
 }
 
-/**
- * Creates a General Settings formatting card
- */
-export function createGeneralCard(settings: {
-    responsiveText?: boolean;
-    fontScaleFactor?: number;
-}): powerbi.visuals.FormattingCard {
-    const slices: powerbi.visuals.FormattingSlice[] = [];
-
-    if (settings.responsiveText !== undefined) {
-        slices.push({
-            uid: "general_responsiveText",
-            displayName: "Responsive Text",
-            control: {
-                type: powerbi.visuals.FormattingComponent.ToggleSwitch,
-                properties: {
-                    descriptor: { objectName: "general", propertyName: "responsiveText" },
-                    value: settings.responsiveText
-                }
-            }
-        } as powerbi.visuals.FormattingSlice);
-    }
-
-    if (settings.fontScaleFactor !== undefined) {
-        slices.push({
-            uid: "general_fontScaleFactor",
-            displayName: "Font Scale Factor",
-            control: {
-                type: powerbi.visuals.FormattingComponent.NumUpDown,
-                properties: {
-                    descriptor: { objectName: "general", propertyName: "fontScaleFactor" },
-                    value: settings.fontScaleFactor
-                }
-            }
-        } as powerbi.visuals.FormattingSlice);
-    }
-
-    return {
-        displayName: "General",
-        uid: "general_card",
-        groups: [{
-            displayName: "Settings",
-            uid: "general_group",
-            slices
-        }]
-    };
-}
 
 export function createTooltipCard(settings: ITooltipSettings): powerbi.visuals.FormattingCard {
     return {
@@ -1076,7 +1051,11 @@ export function createBubbleSettingsCard(settings: {
                         type: powerbi.visuals.FormattingComponent.NumUpDown,
                         properties: {
                             descriptor: { objectName: "bubbleSettings", propertyName: "minBubbleSize" },
-                            value: settings.minBubbleSize
+                            value: settings.minBubbleSize,
+                            options: {
+                                minValue: { type: powerbi.visuals.ValidatorType.Min, value: 10 },
+                                maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 30 }
+                            }
                         }
                     }
                 } as powerbi.visuals.FormattingSlice,
@@ -1087,7 +1066,11 @@ export function createBubbleSettingsCard(settings: {
                         type: powerbi.visuals.FormattingComponent.NumUpDown,
                         properties: {
                             descriptor: { objectName: "bubbleSettings", propertyName: "maxBubbleSize" },
-                            value: settings.maxBubbleSize
+                            value: settings.maxBubbleSize,
+                            options: {
+                                minValue: { type: powerbi.visuals.ValidatorType.Min, value: 40 },
+                                maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 100 }
+                            }
                         }
                     }
                 } as powerbi.visuals.FormattingSlice,
@@ -1131,7 +1114,11 @@ export function createBubbleSettingsCard(settings: {
                         type: powerbi.visuals.FormattingComponent.NumUpDown,
                         properties: {
                             descriptor: { objectName: "bubbleSettings", propertyName: "labelFontSize" },
-                            value: settings.labelFontSize
+                            value: settings.labelFontSize,
+                            options: {
+                                minValue: { type: powerbi.visuals.ValidatorType.Min, value: 6 },
+                                maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 24 }
+                            }
                         }
                     }
                 } as powerbi.visuals.FormattingSlice,
@@ -1142,7 +1129,11 @@ export function createBubbleSettingsCard(settings: {
                         type: powerbi.visuals.FormattingComponent.NumUpDown,
                         properties: {
                             descriptor: { objectName: "bubbleSettings", propertyName: "minLabelFontSize" },
-                            value: settings.minLabelFontSize
+                            value: settings.minLabelFontSize,
+                            options: {
+                                minValue: { type: powerbi.visuals.ValidatorType.Min, value: 6 },
+                                maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 14 }
+                            }
                         }
                     }
                 } as powerbi.visuals.FormattingSlice,
@@ -1153,7 +1144,11 @@ export function createBubbleSettingsCard(settings: {
                         type: powerbi.visuals.FormattingComponent.NumUpDown,
                         properties: {
                             descriptor: { objectName: "bubbleSettings", propertyName: "maxLabelFontSize" },
-                            value: settings.maxLabelFontSize
+                            value: settings.maxLabelFontSize,
+                            options: {
+                                minValue: { type: powerbi.visuals.ValidatorType.Min, value: 10 },
+                                maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 24 }
+                            }
                         }
                     }
                 } as powerbi.visuals.FormattingSlice

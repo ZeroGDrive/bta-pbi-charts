@@ -1,7 +1,7 @@
 "use strict";
 
 import * as d3 from "d3";
-import { BaseRenderer, RenderContext, ChartData, formatLabel, measureMaxLabelWidth } from "@pbi-visuals/shared";
+import { BaseRenderer, RenderContext, ChartData, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
 import { ICalendarVisualSettings } from "./settings";
 import { CalendarData, CalendarDataPoint } from "./CalendarTransformer";
 
@@ -21,9 +21,9 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
 
         const { calendarPoints, years, maxValue, groups } = calendarData;
 
-        // Cell sizes based on setting
-        const cellSizeMap = { small: 10, medium: 14, large: 18 };
-        const cellSize = cellSizeMap[settings.calendar.cellSize];
+        // Cell sizes: fit-to-frame (native-like), capped by the user's preference.
+        const cellSizeCapMap = { small: 12, medium: 16, large: 20 };
+        const cellSizeCap = cellSizeCapMap[settings.calendar.cellSize];
         const cellPadding = 2;
 
         const weekStartOffset = settings.calendar.weekStartsOn === "monday" ? 1 : 0;
@@ -31,15 +31,21 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
             ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+        const yAxisBaseFontSize = settings.yAxisFontSize || 11;
+
         const yearFontSizeForMargin = this.getEffectiveFontSize(
-            settings.textSizes.yearLabelFontSize,
-            11,
-            9, 16
+            settings.textSizes.yearLabelFontSize > 0
+                ? settings.textSizes.yearLabelFontSize
+                : Math.round(11 * (yAxisBaseFontSize / 11)),
+            6,
+            40
         );
         const dayFontSizeForMargin = this.getEffectiveFontSize(
-            settings.textSizes.dayLabelFontSize,
-            8,
-            6, 12
+            settings.textSizes.dayLabelFontSize > 0
+                ? settings.textSizes.dayLabelFontSize
+                : Math.round(8 * (yAxisBaseFontSize / 11)),
+            6,
+            40
         );
 
         const yearLabelWidth = measureMaxLabelWidth(years.map(y => y.toString()), yearFontSizeForMargin);
@@ -50,22 +56,46 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
         const dayGutter = settings.showYAxis ? Math.ceil(dayLabelWidth + 10) : 0;
         const leftGutter = Math.ceil(yearLabelWidth + 12 + dayGutter);
 
-        const legendNeedsBottomSpace = settings.showLegend && settings.legendPosition === "bottom";
-        const topLegendPadding = settings.showLegend && settings.legendPosition !== "bottom" ? 36 : 0;
-
         const margin = {
-            top: 40 + topLegendPadding,
-            right: 20,
-            bottom: legendNeedsBottomSpace ? 50 : 20,
+            top: 12,
+            right: 12,
+            bottom: 12,
             left: leftGutter
         };
         const chartWidth = this.context.width - margin.left - margin.right;
 
-        const yearCount = years.length;
-        const yearsPerGroup = Math.max(1, yearCount);
+        const groupCount = groups.length || 1;
+        const totalSpacing = (groupCount - 1) * settings.smallMultiples.spacing;
+        const availableHeight = this.context.height - margin.top - margin.bottom - totalSpacing;
+        const groupHeightTarget = availableHeight / groupCount;
 
-        // Calculate height needed per year
-        const yearHeight = 7 * (cellSize + cellPadding) + (settings.calendar.showMonthLabels ? 20 : 0) + 20;
+        const yearCount = years.length || 1;
+        const monthLabelBlock = settings.calendar.showMonthLabels ? 20 : 0;
+        const yearExtraBlock = monthLabelBlock + 20;
+
+        // Week columns depend on the year/week-start. Use the maximum across visible years for stable layout.
+        const weeksPerYear = Math.max(
+            1,
+            ...years.map(y => this.getWeekNumber(new Date(y, 11, 31), weekStartOffset) + 1)
+        );
+
+        // Width-first sizing (native-like): choose a cell size that best uses the available width,
+        // then only shrink if height is insufficient.
+        const maxCellByWidth = chartWidth > 0
+            ? ((chartWidth - dayGutter) / weeksPerYear) - cellPadding
+            : cellSizeCap;
+        let cellSize = Math.floor(Math.min(cellSizeCap, Number.isFinite(maxCellByWidth) ? maxCellByWidth : cellSizeCap));
+        cellSize = Math.max(6, cellSize);
+
+        if (groupHeightTarget > 0) {
+            const maxCellByHeight = (((groupHeightTarget / yearCount) - yearExtraBlock) / 7) - cellPadding;
+            if (Number.isFinite(maxCellByHeight) && maxCellByHeight > 0) {
+                cellSize = Math.max(6, Math.min(cellSize, Math.floor(maxCellByHeight)));
+            }
+        }
+
+        // Height needed per year
+        const yearHeight = 7 * (cellSize + cellPadding) + yearExtraBlock;
 
         // Use custom colors from settings
         const colorScale = d3.scaleSequential()
@@ -76,18 +106,19 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
 
         groups.forEach((groupName, groupIndex) => {
             const groupPoints = calendarPoints.filter(d => d.groupValue === groupName);
+            const contentHeight = yearCount * yearHeight;
+            const offsetY = groupHeightTarget > 0 ? Math.max(0, (groupHeightTarget - contentHeight) / 2) : 0;
 
             const panelGroup = this.context.container.append("g")
                 .attr("class", "calendar-panel")
-                .attr("transform", `translate(${Math.round(margin.left)}, ${Math.round(currentY)})`);
+                .attr("transform", `translate(${Math.round(margin.left)}, ${Math.round(currentY + offsetY)})`);
 
             // Group title with configurable spacing
             if (settings.smallMultiples.showTitle && groupName !== "All") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleFontSize = this.getEffectiveFontSize(
-                    settings.textSizes.panelTitleFontSize,
-                    settings.smallMultiples.titleFontSize,
-                    10, 24
+                    settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
+                    6, 40
                 );
                 const displayTitle = formatLabel(groupName, chartWidth, titleFontSize);
                 const title = panelGroup.append("text")
@@ -194,7 +225,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                         .attr("stroke", "#fff")
                         .attr("stroke-width", 1);
 
-                    this.addTooltip(cell as any, [{ displayName: "Value", value: value.toLocaleString() }], {
+                    this.addTooltip(cell as any, [{ displayName: "Value", value: formatMeasureValue(value, calendarData.valueFormatString) }], {
                         title: dateStr,
                         subtitle: groupName !== "All" ? groupName : undefined,
                         color: fill
@@ -207,8 +238,8 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                 // Month labels - manual override or responsive font size
                 if (settings.calendar.showMonthLabels) {
                     const monthFontSize = this.getEffectiveFontSize(
-                        settings.textSizes.monthLabelFontSize,
-                        9, 7, 14
+                        settings.textSizes.monthLabelFontSize > 0 ? settings.textSizes.monthLabelFontSize : 9,
+                        6, 40
                     );
                     monthPositions.forEach((x, month) => {
                         if (x !== undefined) {
@@ -225,14 +256,10 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                 yearOffsetY += yearHeight;
             });
 
-            currentY += yearsPerGroup * yearHeight + settings.smallMultiples.spacing;
+            currentY += groupHeightTarget + settings.smallMultiples.spacing;
         });
 
-        // Legend (gradient) - use shared positioning logic (top-right when legend position is Right)
-        this.renderLegend(colorScale, maxValue, false, undefined, undefined, {
-            min: settings.calendar.minColor,
-            max: settings.calendar.maxColor
-        });
+        // Calendar heatmap has no legend by design (tooltips carry the details).
     }
 
     private getWeekNumber(date: Date, weekStartOffset: number): number {

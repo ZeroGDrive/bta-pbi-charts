@@ -11,6 +11,7 @@ export interface BumpChartDataPoint extends DataPoint {
 export interface BumpChartData extends ChartData {
     rankedData: Map<string, BumpChartDataPoint[]>;
     maxRank: number;
+    hasLegendRoleData: boolean;
 }
 
 export class BumpChartTransformer {
@@ -24,7 +25,7 @@ export class BumpChartTransformer {
 
         let xAxisIndex = -1;
         let yAxisIndex = -1;
-        let groupByIndex = -1;
+        let legendIndex = -1;
 
         if (categorical.categories) {
             categorical.categories.forEach((cat, idx) => {
@@ -32,18 +33,19 @@ export class BumpChartTransformer {
                 if (role) {
                     if (role["xAxis"]) xAxisIndex = idx;
                     if (role["yAxis"]) yAxisIndex = idx;
-                    if (role["groupBy"]) groupByIndex = idx;
+                    if (role["legend"]) legendIndex = idx;
                 }
             });
         }
 
         const values = categorical.values?.[0]?.values || [];
+        const valueFormatString = (categorical.values?.[0]?.source as any)?.format as string | undefined;
 
         for (let i = 0; i < values.length; i++) {
             const rawXValue = xAxisIndex >= 0 ? categorical.categories![xAxisIndex].values[i] : null;
             const xValue = formatDataValue(rawXValue, i);
             const yValue = yAxisIndex >= 0 ? String(categorical.categories![yAxisIndex].values[i] ?? "") : "Series";
-            const groupValue = groupByIndex >= 0 ? String(categorical.categories![groupByIndex].values[i] ?? "") : "All";
+            const groupValue = "All";
             const value = Number(values[i]) || 0;
 
             if (value > maxValue) maxValue = value;
@@ -111,7 +113,9 @@ export class BumpChartTransformer {
             maxValue,
             minValue,
             rankedData,
-            maxRank: maxRank || yValues.length
+            maxRank: maxRank || yValues.length,
+            hasLegendRoleData: legendIndex >= 0,
+            valueFormatString
         };
     }
 }

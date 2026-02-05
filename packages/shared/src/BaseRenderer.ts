@@ -5,7 +5,8 @@ import powerbi from "powerbi-visuals-api";
 import ITooltipService = powerbi.extensibility.ITooltipService;
 import VisualTooltipDataItem = powerbi.extensibility.VisualTooltipDataItem;
 import { IBaseVisualSettings, colorSchemes } from "./settings";
-import { formatLabel } from "./textUtils";
+import { formatLabel, measureMaxLabelWidth } from "./textUtils";
+import { formatMeasureValue } from "./utils";
 import { renderEmptyState } from "./emptyState";
 import { HtmlTooltip, TooltipMeta, toTooltipRows } from "./tooltip";
 
@@ -27,6 +28,7 @@ export interface ChartData {
     maxValue: number;
     minValue: number;
     categoryColorMap?: Map<string, string>;
+    valueFormatString?: string;
 }
 
 export interface DataPoint {
@@ -36,6 +38,13 @@ export interface DataPoint {
     groupValue: string;
     index: number;
     date?: Date;
+}
+
+export interface LegendAlignFrame {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
 }
 
 export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBaseVisualSettings> {
@@ -48,6 +57,16 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
     }
 
     public abstract render(data: ChartData, settings: TSettings): void;
+
+    // Snap to pixel grid for crisp 1px strokes (adds 0.5 offset)
+    protected snapToPixel(value: number): number {
+        return Math.round(value) + 0.5;
+    }
+
+    // Snap to pixel grid for rect positions (integer values)
+    protected snapToPixelInt(value: number): number {
+        return Math.round(value);
+    }
 
     private static colorParseCanvas: HTMLCanvasElement | null = null;
     private static colorParseCtx: CanvasRenderingContext2D | null = null;
@@ -262,80 +281,312 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
             });
     }
 
+    /**
+     * Deprecated: legacy legend placement helper.
+     * Prefer `getLegendReservation()` + `renderLegend()` (which share the same sizing model)
+     * so the plot reserves space and the legend never overlaps chart content.
+     */
+    protected getLegendLayout(position: string, legendWidth: number, legendHeight: number): {
+        x: number;
+        y: number;
+        isVertical: boolean;
+        anchor: "start" | "middle" | "end";
+    } {
+        const padX = 12;
+        const padY = 12;
+        const w = this.context.width;
+        const h = this.context.height;
+
+        switch (position) {
+            case "topLeft":
+                return { x: padX, y: padY, isVertical: false, anchor: "start" };
+            case "topCenter":
+                return { x: Math.round((w - legendWidth) / 2), y: padY, isVertical: false, anchor: "middle" };
+            case "topRight":
+                return { x: w - legendWidth - padX, y: padY, isVertical: false, anchor: "end" };
+            case "topLeftStacked":
+                return { x: padX, y: padY, isVertical: true, anchor: "start" };
+            case "topRightStacked":
+                return { x: w - legendWidth - padX, y: padY, isVertical: true, anchor: "end" };
+            case "centerLeft":
+                return { x: padX, y: Math.round((h - legendHeight) / 2), isVertical: true, anchor: "start" };
+            case "centerRight":
+                return { x: w - legendWidth - padX, y: Math.round((h - legendHeight) / 2), isVertical: true, anchor: "end" };
+            case "bottomLeft":
+                return { x: padX, y: h - legendHeight - padY, isVertical: false, anchor: "start" };
+            case "bottomCenter":
+                return { x: Math.round((w - legendWidth) / 2), y: h - legendHeight - padY, isVertical: false, anchor: "middle" };
+            case "bottomRight":
+                return { x: w - legendWidth - padX, y: h - legendHeight - padY, isVertical: false, anchor: "end" };
+            default:
+                // Default to topRight
+                return { x: w - legendWidth - padX, y: padY, isVertical: false, anchor: "end" };
+        }
+    }
+
+    protected getLegendReservation(options: {
+        isOrdinal: boolean;
+        categories?: string[];
+        legendWidth?: number;   // gradient legends
+        legendHeight?: number;  // gradient legends
+        legendFontSize?: number;
+    }): { top: number; right: number; bottom: number; left: number } {
+        const position = this.settings.legendPosition || "topRight";
+        const textSizesLegend = (this.settings as any)?.textSizes?.legendFontSize;
+        const defaultLegendFontSize = (typeof textSizesLegend === "number" && textSizesLegend > 0)
+            ? textSizesLegend
+            : (this.settings.legendFontSize || 11);
+        const legendFontSize = options.legendFontSize ?? defaultLegendFontSize;
+        const maxLegendItems = this.settings.maxLegendItems || 10;
+
+        const metrics = options.isOrdinal
+            ? this.computeOrdinalLegendMetrics(options.categories ?? [], position, legendFontSize, maxLegendItems)
+            : this.computeGradientLegendMetrics(position, legendFontSize, options.legendWidth ?? 140, options.legendHeight ?? 12);
+
+        if (!metrics) return { top: 0, right: 0, bottom: 0, left: 0 };
+
+        const gap = 10;
+        const padX = metrics.padX;
+        const padY = metrics.padY;
+
+        switch (metrics.dock) {
+            case "top":
+                return { top: metrics.height + padY + gap, right: 0, bottom: 0, left: 0 };
+            case "bottom":
+                return { top: 0, right: 0, bottom: metrics.height + padY + gap, left: 0 };
+            case "left":
+                return { top: 0, right: 0, bottom: 0, left: metrics.width + padX + gap };
+            case "right":
+                return { top: 0, right: metrics.width + padX + gap, bottom: 0, left: 0 };
+        }
+    }
+
+    private getLegendDock(position: string): {
+        dock: "top" | "bottom" | "left" | "right";
+        align: "start" | "middle" | "end";
+        isVertical: boolean;
+        vAlign: "top" | "middle";
+    } {
+        const pos = position || "topRight";
+        const lower = pos.toLowerCase();
+
+        const isStacked = lower.includes("stacked");
+        const isCenter = lower.startsWith("center");
+        const isBottom = lower.startsWith("bottom");
+
+        const hasLeft = lower.includes("left");
+        const hasRight = lower.includes("right");
+        const hasCenter = lower.includes("center");
+
+        if (isCenter && hasLeft) return { dock: "left", align: "start", isVertical: true, vAlign: "middle" };
+        if (isCenter && hasRight) return { dock: "right", align: "end", isVertical: true, vAlign: "middle" };
+        // "Top Left/Right (Stacked)" should remain docked at the top, but lay items vertically.
+        if (isStacked && hasLeft) return { dock: "top", align: "start", isVertical: true, vAlign: "top" };
+        if (isStacked && hasRight) return { dock: "top", align: "end", isVertical: true, vAlign: "top" };
+
+        const dock: "top" | "bottom" = isBottom ? "bottom" : "top";
+        const align: "start" | "middle" | "end" = hasCenter ? "middle" : (hasLeft ? "start" : "end");
+        return { dock, align, isVertical: false, vAlign: "top" };
+    }
+
+    private computeOrdinalLegendMetrics(
+        categories: string[],
+        position: string,
+        legendFontSize: number,
+        maxLegendItems: number
+    ): {
+        dock: "top" | "bottom" | "left" | "right";
+        align: "start" | "middle" | "end";
+        vAlign: "top" | "middle";
+        isVertical: boolean;
+        width: number;
+        height: number;
+        itemsPerRow: number;
+        itemsPerCol: number;
+        colWidth: number;
+        rowHeight: number;
+        padX: number;
+        padY: number;
+    } | null {
+        const items = categories.slice(0, Math.max(0, maxLegendItems));
+        if (items.length === 0) return null;
+
+        const { dock, align, isVertical, vAlign } = this.getLegendDock(position);
+
+        const padX = 12;
+        const padY = 12;
+        const availableWidth = Math.max(0, this.context.width - padX * 2);
+        const availableHeight = Math.max(0, this.context.height - padY * 2);
+
+        const swatchWidth = 12;
+        const gap = 6;
+        const reservedTextPad = 8;
+
+        const rowHeight = Math.max(16, Math.round(legendFontSize) + 6);
+        const maxLabelWidth = Math.max(0, Math.ceil(measureMaxLabelWidth(items, legendFontSize, "Segoe UI")));
+
+        const itemWidthMin = 88;
+        const itemWidthCap = 170;
+        const textWidthCap = 130;
+
+        const colWidth = Math.min(
+            itemWidthCap,
+            Math.max(itemWidthMin, swatchWidth + gap + Math.min(textWidthCap, maxLabelWidth) + reservedTextPad)
+        );
+
+        if (dock === "left" || dock === "right" || isVertical) {
+            // For stacked legends docked to top/bottom, cap legend height so it doesn't consume the full viewport.
+            const heightCap = (dock === "top" || dock === "bottom")
+                ? Math.max(rowHeight, Math.floor(availableHeight * 0.35))
+                : availableHeight;
+            const itemsPerColMax = Math.max(1, Math.floor(heightCap / rowHeight));
+            const itemsPerCol = Math.max(1, Math.min(itemsPerColMax, items.length));
+            const cols = Math.max(1, Math.ceil(items.length / itemsPerCol));
+            return {
+                dock,
+                align,
+                vAlign,
+                isVertical: true,
+                width: Math.min(availableWidth, cols * colWidth),
+                height: Math.min(heightCap, itemsPerCol * rowHeight),
+                itemsPerRow: 1,
+                itemsPerCol,
+                colWidth,
+                rowHeight,
+                padX,
+                padY
+            };
+        }
+
+        const itemsPerRowMax = Math.max(1, Math.floor(availableWidth / colWidth));
+        const itemsPerRow = Math.max(1, Math.min(itemsPerRowMax, items.length));
+        const rows = Math.max(1, Math.ceil(items.length / itemsPerRow));
+        return {
+            dock,
+            align,
+            vAlign,
+            isVertical: false,
+            width: Math.min(availableWidth, itemsPerRow * colWidth),
+            height: rows * rowHeight,
+            itemsPerRow,
+            itemsPerCol: 1,
+            colWidth,
+            rowHeight,
+            padX,
+            padY
+        };
+    }
+
+    private computeGradientLegendMetrics(
+        position: string,
+        legendFontSize: number,
+        legendWidth: number,
+        legendHeight: number
+    ): {
+        dock: "top" | "bottom" | "left" | "right";
+        align: "start" | "middle" | "end";
+        vAlign: "top" | "middle";
+        isVertical: boolean;
+        width: number;
+        height: number;
+        padX: number;
+        padY: number;
+    } {
+        const { dock, align, vAlign } = this.getLegendDock(position);
+        const padX = 12;
+        const padY = 12;
+        const labelBlockHeight = Math.round(legendFontSize) + 6;
+        return {
+            dock,
+            align,
+            vAlign,
+            isVertical: false,
+            width: legendWidth,
+            height: legendHeight + labelBlockHeight,
+            padX,
+            padY
+        };
+    }
+
+    private getLegendOrigin(metrics: {
+        dock: "top" | "bottom" | "left" | "right";
+        align: "start" | "middle" | "end";
+        vAlign: "top" | "middle";
+        width: number;
+        height: number;
+        padX: number;
+        padY: number;
+    }, alignFrame?: LegendAlignFrame): { x: number; y: number } {
+        const w = this.context.width;
+        const h = this.context.height;
+        const { dock, align, vAlign, width, height, padX, padY } = metrics;
+
+        const xAligned = (): number => {
+            const frameX = alignFrame?.x ?? padX;
+            const frameW = alignFrame?.width ?? Math.max(0, w - padX * 2);
+
+            if (align === "start") return Math.round(frameX);
+            if (align === "middle") return Math.round(frameX + (frameW - width) / 2);
+            return Math.round(frameX + frameW - width);
+        };
+
+        if (dock === "top") return { x: xAligned(), y: padY };
+        if (dock === "bottom") return { x: xAligned(), y: Math.round(h - height - padY) };
+
+        const frameY = alignFrame?.y ?? padY;
+        const frameH = alignFrame?.height ?? Math.max(0, h - padY * 2);
+        const y = vAlign === "middle"
+            ? Math.round(frameY + (frameH - height) / 2)
+            : Math.round(frameY);
+        if (dock === "left") return { x: padX, y };
+        return { x: Math.round(w - width - padX), y };
+    }
+
     protected renderLegend(
         colorScale: d3.ScaleSequential<string, never> | d3.ScaleOrdinal<string, string, never>,
         maxValue: number,
         isOrdinal: boolean = false,
         categories?: string[],
         customY?: number,
-        customGradientColors?: { min: string; max: string }
+        customGradientColors?: { min: string; max: string },
+        layout?: { alignFrame?: LegendAlignFrame }
     ): void {
-        if (!this.settings.showLegend) return;
-
         const legendWidth = 140;
-        const legendHeight = 14;
-        const legendFontSize = this.getResponsiveFontSize(this.settings.legendFontSize || 11, 9, 16);
+        const legendHeight = 12;
+        const textSizesLegend = (this.settings as any)?.textSizes?.legendFontSize;
+        const legendFontSize = (typeof textSizesLegend === "number" && textSizesLegend > 0)
+            ? textSizesLegend
+            : (this.settings.legendFontSize || 11);
         const maxLegendItems = this.settings.maxLegendItems || 10;
-
-        // Default legend position (ordinal legends remain bottom to avoid overlap with charts)
-        let x = 40;
-        let y = customY !== undefined ? customY : this.context.height - 45;
-
-        // For gradient legends (heatmaps/calendars), use legend position to place it in unused space.
-        if (!isOrdinal && customY === undefined) {
-            const pos = this.settings.legendPosition || "right";
-            const padX = 20;
-            const padY = 16;
-
-            if (pos === "bottom") {
-                y = this.context.height - 45;
-            } else {
-                // top/left/right -> top row
-                y = padY;
-            }
-
-            if (pos === "right") {
-                x = Math.max(padX, this.context.width - legendWidth - padX);
-            } else {
-                x = padX;
-            }
-        }
+        const position = this.settings.legendPosition || "topRight";
 
         if (isOrdinal && categories) {
-            // Horizontal categorical legend with smart truncation
+            // Categorical legend (color swatches with labels)
             const ordinalScale = colorScale as d3.ScaleOrdinal<string, string, never>;
-            const itemCount = Math.min(categories.length, maxLegendItems);
-            const padX = 20;
-            const availableWidth = Math.max(120, this.context.width - (x + padX));
+            const metrics = this.computeOrdinalLegendMetrics(categories, position, legendFontSize, maxLegendItems);
+            if (!metrics) return;
 
-            const itemWidthMin = 90;
-            const itemWidthCap = 160;
-            const itemsPerRow = Math.max(1, Math.floor(availableWidth / itemWidthMin));
-            const rowCount = Math.ceil(itemCount / itemsPerRow);
-            const rowHeight = Math.max(legendHeight, Math.round(legendFontSize) + 6);
-
-            // Keep legend inside the viewport (grow upwards if needed)
-            if (customY === undefined) {
-                const totalLegendHeight = rowCount * rowHeight;
-                y = Math.max(10, this.context.height - totalLegendHeight - 20);
-            }
+            const baseOrigin = this.getLegendOrigin(metrics, layout?.alignFrame);
+            const x = baseOrigin.x;
+            const y = customY !== undefined ? customY : baseOrigin.y;
 
             const legendGroup = this.context.container.append("g")
                 .attr("class", "color-legend")
                 .attr("transform", `translate(${Math.round(x)}, ${Math.round(y)})`);
 
-            const effectiveItemsPerRow = Math.min(itemsPerRow, itemCount);
-            const itemWidth = Math.min(itemWidthCap, availableWidth / effectiveItemsPerRow);
+            const swatch = 12;
+            const gap = 6;
+            const textOffsetX = swatch + gap + 4;
+            const maxTextWidth = Math.max(0, metrics.colWidth - textOffsetX - 8);
 
-            const reservedSpace = 24; // Color box + padding
-            const maxTextWidth = Math.max(0, itemWidth - reservedSpace);
+            const items = categories.slice(0, maxLegendItems);
 
-            categories.slice(0, maxLegendItems).forEach((cat, i) => {
-                const row = Math.floor(i / effectiveItemsPerRow);
-                const col = i % effectiveItemsPerRow;
-                const itemX = col * itemWidth;
-                const itemY = row * rowHeight;
+            items.forEach((cat, i) => {
+                const row = metrics.isVertical ? (i % metrics.itemsPerCol) : Math.floor(i / metrics.itemsPerRow);
+                const col = metrics.isVertical ? Math.floor(i / metrics.itemsPerCol) : (i % metrics.itemsPerRow);
 
+                const itemX = col * metrics.colWidth;
+                const itemY = row * metrics.rowHeight;
                 const displayText = formatLabel(cat, maxTextWidth, legendFontSize);
 
                 const itemGroup = legendGroup.append("g")
@@ -344,17 +595,17 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
 
                 itemGroup.append("rect")
                     .attr("x", 0)
-                    .attr("y", 0)
-                    .attr("width", 14)
-                    .attr("height", 14)
+                    .attr("y", Math.round((metrics.rowHeight - swatch) / 2))
+                    .attr("width", swatch)
+                    .attr("height", swatch)
                     .attr("rx", 3)
                     .attr("fill", ordinalScale(cat));
 
                 itemGroup.append("text")
-                    .attr("x", 20)
-                    .attr("y", Math.round(rowHeight / 2 + legendFontSize / 2 - 2))
+                    .attr("x", textOffsetX)
+                    .attr("y", Math.round(metrics.rowHeight / 2 + legendFontSize / 2 - 2))
                     .attr("font-size", `${legendFontSize}px`)
-                    .attr("fill", "#555")
+                    .attr("fill", "#6b7280")
                     .text(displayText);
 
                 if (displayText !== cat) {
@@ -362,11 +613,16 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                 }
             });
         } else {
+            // Gradient legend (for heatmaps, etc.)
+            const metrics = this.computeGradientLegendMetrics(position, legendFontSize, legendWidth, legendHeight);
+            const origin = this.getLegendOrigin(metrics, layout?.alignFrame);
+            const x = origin.x;
+            const y = customY !== undefined ? customY : origin.y;
+
             const legendGroup = this.context.container.append("g")
                 .attr("class", "color-legend")
                 .attr("transform", `translate(${Math.round(x)}, ${Math.round(y)})`);
 
-            // Gradient legend
             const gradientId = `legend-gradient-${++BaseRenderer.gradientCounter}`;
             const defs = this.context.svg.select("defs").empty()
                 ? this.context.svg.append("defs")
@@ -390,22 +646,22 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                 .attr("stroke-width", 1);
 
             const minLabel = "0";
-            const maxLabel = maxValue.toLocaleString();
-            const labelY = legendHeight + Math.max(10, Math.round(legendFontSize)) + 2;
+            const maxLabel = formatMeasureValue(maxValue, undefined);
+            const labelY = legendHeight + Math.round(legendFontSize) + 4;
 
             legendGroup.append("text")
                 .attr("x", 0)
-                .attr("y", labelY)
+                .attr("y", Math.round(labelY))
                 .attr("font-size", `${legendFontSize}px`)
-                .attr("fill", "#777")
+                .attr("fill", "#6b7280")
                 .text(minLabel);
 
             legendGroup.append("text")
                 .attr("x", legendWidth)
-                .attr("y", labelY)
+                .attr("y", Math.round(labelY))
                 .attr("text-anchor", "end")
                 .attr("font-size", `${legendFontSize}px`)
-                .attr("fill", "#777")
+                .attr("fill", "#6b7280")
                 .text(maxLabel);
         }
     }
@@ -420,77 +676,31 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         return luminance > 0.5 ? "#333333" : "#ffffff";
     }
 
-    // Responsive text sizing helpers
-    protected getResponsiveFontSize(
-        baseFontSize: number,
+    /**
+     * Get effective font size - clamps to min/max bounds
+     * @param fontSize The font size setting
+     * @param minSize Minimum font size (default 8)
+     * @param maxSize Maximum font size (default 24)
+     */
+    protected getEffectiveFontSize(
+        fontSize: number,
         minSize: number = 8,
         maxSize: number = 24
     ): number {
-        // If responsiveText is disabled, return the base size
-        if (this.settings.responsiveText === false) {
-            return baseFontSize;
-        }
-
-        // Get the user-controlled scale factor (default 1.0)
-        const userScaleFactor = this.settings.fontScaleFactor ?? 1.0;
-
-        // Scale based on chart dimensions - more aggressive scaling
-        // Base reference is 400px, scales linearly with smaller dimension
-        const dimensionScale = Math.min(this.context.width, this.context.height) / 400;
-
-        // Apply more aggressive scaling range (0.5x to 2.0x) for better responsiveness
-        const clampedDimensionScale = Math.max(0.5, Math.min(2.0, dimensionScale));
-
-        // Combine dimension scaling with user's scale factor
-        const finalScale = clampedDimensionScale * userScaleFactor;
-
-        const scaled = baseFontSize * finalScale;
-        return Math.max(minSize, Math.min(maxSize, Math.round(scaled)));
+        return Math.max(minSize, Math.min(maxSize, fontSize));
     }
 
     /**
-     * Get effective font size - uses manual override if > 0, otherwise falls back to responsive calculation
-     * @param manualSize Manual font size setting (0 = auto)
-     * @param baseFontSize Base font size for responsive calculation
-     * @param minSize Minimum font size
-     * @param maxSize Maximum font size
+     * Get font size that scales proportionally with element size (e.g., bubble radius)
      */
-    protected getEffectiveFontSize(
-        manualSize: number,
-        baseFontSize: number,
-        minSize: number = 8,
-        maxSize: number = 24
-    ): number {
-        // If manual size is set (> 0), use it directly
-        if (manualSize > 0) {
-            return Math.max(minSize, Math.min(maxSize, manualSize));
-        }
-        // Otherwise use responsive sizing
-        return this.getResponsiveFontSize(baseFontSize, minSize, maxSize);
-    }
-
-    // Get font size that scales proportionally with a specific element size (e.g., bubble radius)
     protected getProportionalFontSize(
         elementSize: number,
         ratio: number = 0.25,
         minSize: number = 8,
         maxSize: number = 24
     ): number {
-        const userScaleFactor = this.settings.fontScaleFactor ?? 1.0;
-        const computed = elementSize * ratio * userScaleFactor;
+        const computed = elementSize * ratio;
         return Math.max(minSize, Math.min(maxSize, Math.round(computed)));
-    }
-
-    protected getResponsiveAxisFontSize(): number {
-        return this.getResponsiveFontSize(this.settings.xAxisFontSize, 8, 18);
-    }
-
-    protected getResponsiveTitleFontSize(): number {
-        return this.getResponsiveFontSize(this.settings.smallMultiples.titleFontSize, 10, 24);
-    }
-
-    protected getResponsiveLegendFontSize(): number {
-        return this.getResponsiveFontSize(this.settings.legendFontSize || 11, 9, 16);
     }
 
     protected renderNoData(): void {
