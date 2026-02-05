@@ -7,6 +7,7 @@
 
     svg text {
         text-rendering: geometricPrecision;
+        font-feature-settings: "kern" 1, "liga" 1;
     }
 
     // Crisp rendering for straight lines
@@ -23,8 +24,13 @@
     }
 
     // Crisp rectangles (heatmap cells, legend boxes)
-    rect {
+    // Use geometricPrecision for rounded-corner rects to avoid jagged arcs
+    rect:not([rx]),
+    rect[rx="0"] {
         shape-rendering: crispEdges;
+    }
+    rect[rx] {
+        shape-rendering: geometricPrecision;
     }
 
     .chart-container {
@@ -44,8 +50,8 @@
     // Heatmap cells with refined styling - using border for hover instead of filter
     .heatmap-cell {
         cursor: pointer;
+        vector-effect: non-scaling-stroke;
         transition: stroke 0.15s ease, stroke-width 0.15s ease;
-        // Note: hover effect is now handled via JS for border-based feedback
     }
 
     .cell-value {

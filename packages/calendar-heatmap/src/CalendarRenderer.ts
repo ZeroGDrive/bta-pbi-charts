@@ -1,7 +1,6 @@
 "use strict";
 
-import * as d3 from "d3";
-import { BaseRenderer, RenderContext, ChartData, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
+import { d3, BaseRenderer, RenderContext, ChartData, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
 import { ICalendarVisualSettings } from "./settings";
 import { CalendarData, CalendarDataPoint } from "./CalendarTransformer";
 
@@ -62,7 +61,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
             6,
             40
         );
-        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.length > 1 && groups.some(g => g !== "All" && g !== "(Blank)"));
         const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
         const interPanelGap = groups.length > 1
             ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
@@ -126,7 +125,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                 .attr("transform", `translate(${Math.round(margin.left)}, ${Math.round(currentY + offsetY)})`);
 
             // Group title with configurable spacing
-            if (settings.smallMultiples.showTitle && groupName !== "All") {
+            if (settings.smallMultiples.showTitle && groups.length > 1 && groupName !== "All" && groupName !== "(Blank)") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleFontSize = this.getEffectiveFontSize(
                     settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
@@ -212,8 +211,8 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
                     const dayOfWeek = (currentDate.getDay() - weekStartOffset + 7) % 7;
                     const weekOfYear = this.getWeekNumber(currentDate, weekStartOffset);
 
-                    const x = dayGutter + weekOfYear * (cellSize + cellPadding);
-                    const y = dayOfWeek * (cellSize + cellPadding);
+                    const x = this.snapToPixelInt(dayGutter + weekOfYear * (cellSize + cellPadding));
+                    const y = this.snapToPixelInt(dayOfWeek * (cellSize + cellPadding));
 
                     // Track month positions for labels
                     if (currentDate.getDate() === 1) {
@@ -246,7 +245,7 @@ export class CalendarRenderer extends BaseRenderer<ICalendarVisualSettings> {
 
                     this.addTooltip(cell as any, [{ displayName: "Value", value: formatMeasureValue(value, calendarData.valueFormatString) }], {
                         title: dateStr,
-                        subtitle: groupName !== "All" ? groupName : undefined,
+                        subtitle: (groupName !== "All" && groupName !== "(Blank)") ? groupName : undefined,
                         color: fill
                     });
 

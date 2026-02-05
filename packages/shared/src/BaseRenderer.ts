@@ -1,6 +1,6 @@
 "use strict";
 
-import * as d3 from "d3";
+import * as d3 from "./d3";
 import powerbi from "powerbi-visuals-api";
 import ITooltipService = powerbi.extensibility.ITooltipService;
 import VisualTooltipDataItem = powerbi.extensibility.VisualTooltipDataItem;

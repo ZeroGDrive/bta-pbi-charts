@@ -1,7 +1,7 @@
 "use strict";
 
-import * as d3 from "d3";
 import {
+    d3,
     BaseRenderer,
     RenderContext,
     ChartData,
@@ -53,7 +53,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
             6,
             40
         );
-        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.length > 1 && groups.some(g => g !== "All" && g !== "(Blank)"));
         const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
         const interPanelGap = groups.length > 1
             ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
@@ -100,7 +100,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
                 .attr("transform", `translate(${Math.round(margin.left)}, ${Math.round(currentY)})`);
 
             // Group title
-            if (settings.smallMultiples.showTitle && groupName !== "All") {
+            if (settings.smallMultiples.showTitle && groups.length > 1 && groupName !== "All" && groupName !== "(Blank)") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleBase = settings.smallMultiples.titleFontSize;
                 const titleRequested = settings.textSizes.panelTitleFontSize > 0 ? settings.textSizes.panelTitleFontSize : titleBase;
@@ -189,7 +189,7 @@ export class DonutChartRenderer extends BaseRenderer<IDonutVisualSettings> {
                 const tooltipData = [
                     { displayName: "Value", value: formatMeasureValue(d.data.value, this.valueFormatString) },
                     { displayName: "Percent", value: `${(percent * 100).toFixed(1)}%` },
-                    ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
+                    ...(groupName !== "All" && groupName !== "(Blank)" ? [{ displayName: "Group", value: groupName }] : [])
                 ];
                 const subtitle = `${(percent * 100).toFixed(1)}%`;
                 this.addTooltip(d3.select(nodes[i]) as any, tooltipData, { title: d.data.category, subtitle, color });

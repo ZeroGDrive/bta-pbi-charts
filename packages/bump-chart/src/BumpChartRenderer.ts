@@ -1,7 +1,7 @@
 "use strict";
 
-import * as d3 from "d3";
 import {
+    d3,
     BaseRenderer,
     RenderContext,
     ChartData,
@@ -137,7 +137,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
             6,
             40
         );
-        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.length > 1 && groups.some(g => g !== "All" && g !== "(Blank)"));
         const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
         const interPanelGap = groups.length > 1
             ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
@@ -187,7 +187,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                 .attr("transform", `translate(${margin.left}, ${currentY})`);
 
             // Group title
-            if (settings.smallMultiples.showTitle && groupName !== "All") {
+            if (settings.smallMultiples.showTitle && groups.length > 1 && groupName !== "All" && groupName !== "(Blank)") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleBase = settings.smallMultiples.titleFontSize;
                 const titleRequested = settings.textSizes.panelTitleFontSize > 0 ? settings.textSizes.panelTitleFontSize : titleBase;
@@ -227,7 +227,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
             // FIRST: Draw grid lines (behind everything)
             if (settings.showYAxis) {
                 for (let rank = 1; rank <= effectiveMaxRank; rank++) {
-                    const y = yScale(rank);
+                    const y = this.snapToPixel(yScale(rank));
                     panelGroup.append("line")
                         .attr("class", "grid-line")
                         .attr("x1", 0)
@@ -288,7 +288,7 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                         this.addTooltip(marker as any, [
                             { displayName: "Rank", value: `#${point.rank}` },
                             { displayName: "Value", value: formatMeasureValue(point.value, bumpData.valueFormatString) },
-                            ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
+                            ...(groupName !== "All" && groupName !== "(Blank)" ? [{ displayName: "Group", value: groupName }] : [])
                         ], { title: yVal, subtitle: periodLabel, color });
                     });
                 });
@@ -374,16 +374,36 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                 const shouldRotate = needsRotation;
                 const skipInterval = labelSkipInterval;
 
-                xValues.forEach((xVal, i) => {
-                    // Skip labels based on calculated interval
-                    if (skipInterval > 1 && i % skipInterval !== 0 && i !== xValues.length - 1) {
-                        return;
+                // Pre-compute the set of visible label indices so the last
+                // label is only shown when it doesn't collide with its neighbour.
+                const visibleXIndices: number[] = [];
+                for (let i = 0; i < xValues.length; i++) {
+                    if (skipInterval <= 1 || i % skipInterval === 0) {
+                        visibleXIndices.push(i);
                     }
+                }
+                const lastIdx = xValues.length - 1;
+                if (visibleXIndices.length > 0 && visibleXIndices[visibleXIndices.length - 1] !== lastIdx) {
+                    const prevIdx = visibleXIndices[visibleXIndices.length - 1];
+                    const prevX = xScale(xValues[prevIdx]) ?? 0;
+                    const lastX = xScale(xValues[lastIdx]) ?? 0;
+                    const gap = Math.abs(lastX - prevX);
+                    const maxLabelW = measureMaxLabelWidth(
+                        [xDisplayLabels[prevIdx], xDisplayLabels[lastIdx]],
+                        xAxisFontSize,
+                        settings.xAxisFontFamily
+                    );
+                    if (gap >= maxLabelW + 4) {
+                        visibleXIndices.push(lastIdx);
+                    }
+                }
+                const visibleSet = new Set(visibleXIndices);
+
+                xValues.forEach((xVal, i) => {
+                    if (!visibleSet.has(i)) return;
 
                     const x = Math.round(xScale(xVal) ?? 0);
-                    const visibleCount = Math.ceil(xValues.length / Math.max(1, skipInterval));
-                    const spacePerLabel = chartWidth / Math.max(1, visibleCount);
-                    const displayText = formatLabel(xDisplayLabels[i], Math.max(0, spacePerLabel - 6), xAxisFontSize);
+
                     const text = xAxisGroup.append("text")
                         .attr("x", x)
                         .attr("y", shouldRotate ? 5 : 12)
@@ -393,19 +413,14 @@ export class BumpChartRenderer extends BaseRenderer<IBumpChartVisualSettings> {
                         .style("font-style", settings.xAxisItalic ? "italic" : "normal")
                         .style("text-decoration", settings.xAxisUnderline ? "underline" : "none")
                         .attr("fill", settings.xAxisColor)
-                        .text(displayText);
-
-                    if (displayText !== xDisplayLabels[i]) {
-                        this.addTooltip(text as any, [{ displayName: "X", value: xDisplayLabels[i] }]);
-                    }
+                        .text(xDisplayLabels[i]);
 
                     if (shouldRotate) {
                         text
                             .attr("transform", `rotate(-45, ${x}, 5)`)
                             .attr("text-anchor", "end");
                     } else {
-                        const anchor = i === 0 ? "start" : (i === xValues.length - 1 ? "end" : "middle");
-                        text.attr("text-anchor", anchor);
+                        text.attr("text-anchor", "middle");
                     }
                 });
             }

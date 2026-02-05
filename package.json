@@ -24,9 +24,7 @@
     "start:donut": "bun run --filter @pbi-visuals/donut-chart start",
     "start:bollinger": "bun run --filter @pbi-visuals/bollinger-bands start"
   },
-  "dependencies": {
-    "powerbi-visuals-utils-formattingmodel": "^6.2.2"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "ts-loader": "^9.5.1",

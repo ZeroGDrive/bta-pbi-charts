@@ -1,7 +1,6 @@
 "use strict";
 
 import powerbi from "powerbi-visuals-api";
-import * as d3 from "d3";
 import "./../style/visual.less";
 
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
@@ -12,6 +11,7 @@ import ITooltipService = powerbi.extensibility.ITooltipService;
 import ISelectionId = powerbi.visuals.ISelectionId;
 
 import {
+    d3,
     RenderContext,
     createColorSchemeCard,
     createDataColorsCard,
@@ -78,7 +78,7 @@ export class Visual implements IVisual {
         const width = options.viewport.width;
         const height = options.viewport.height;
 
-        this.svg.attr("width", width).attr("height", height);
+        this.svg.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
 
         // Hide tooltip when mouse leaves the chart entirely
         this.svg.on("mouseleave", () => {

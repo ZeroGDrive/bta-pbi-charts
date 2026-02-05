@@ -7,6 +7,7 @@
 
     svg text {
         text-rendering: geometricPrecision;
+        font-feature-settings: "kern" 1, "liga" 1;
     }
 
     // Crisp rendering for straight lines
@@ -35,8 +36,12 @@
     }
 
     // Crisp rectangles
-    rect {
+    rect:not([rx]),
+    rect[rx="0"] {
         shape-rendering: crispEdges;
+    }
+    rect[rx] {
+        shape-rendering: geometricPrecision;
     }
 
     .chart-container {

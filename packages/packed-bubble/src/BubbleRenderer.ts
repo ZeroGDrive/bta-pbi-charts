@@ -1,7 +1,6 @@
 "use strict";
 
-import * as d3 from "d3";
-import { BaseRenderer, RenderContext, formatLabel, formatMeasureValue } from "@pbi-visuals/shared";
+import { d3, BaseRenderer, RenderContext, formatLabel, formatMeasureValue } from "@pbi-visuals/shared";
 import { IBubbleVisualSettings } from "./settings";
 import { BubbleData, BubbleNode } from "./BubbleTransformer";
 
@@ -37,7 +36,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
             6,
             40
         );
-        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.length > 1 && groups.some(g => g !== "All" && g !== "(Blank)"));
         const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
         const interPanelGap = groups.length > 1
             ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
@@ -87,7 +86,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
                 .attr("transform", `translate(${Math.round(margin.left)}, ${Math.round(currentY)})`);
 
             // Group title with configurable spacing
-            if (settings.smallMultiples.showTitle && groupName !== "All") {
+            if (settings.smallMultiples.showTitle && groups.length > 1 && groupName !== "All" && groupName !== "(Blank)") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleFontSize = this.getEffectiveFontSize(
                     settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
@@ -166,8 +165,8 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
                 .enter()
                 .append("circle")
                 .attr("class", "bubble")
-                .attr("cx", d => d.x)
-                .attr("cy", d => d.y)
+                .attr("cx", d => this.snapToPixelInt(d.x))
+                .attr("cy", d => this.snapToPixelInt(d.y))
                 .attr("r", d => d.radius)
                 .attr("fill", d => (colorScale ? colorScale(d.legendKey) : fallbackColor))
                 .attr("stroke", "#fff")
@@ -181,7 +180,7 @@ export class BubbleRenderer extends BaseRenderer<IBubbleVisualSettings> {
                     { displayName: "Value", value: formatMeasureValue(d.value, bubbleData.valueFormatString) }
                 ], {
                     title: d.category,
-                    subtitle: groupName !== "All" ? groupName : undefined,
+                    subtitle: (groupName !== "All" && groupName !== "(Blank)") ? groupName : undefined,
                     color: colorScale ? colorScale(d.legendKey) : fallbackColor
                 });
             });

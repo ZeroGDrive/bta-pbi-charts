@@ -1,7 +1,6 @@
 "use strict";
 
-import * as d3 from "d3";
-import { BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
+import { d3, BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
 import { IHeatmapVisualSettings } from "./settings";
 import { AxisHierarchy, HeatmapMatrixData } from "./HeatmapTransformer";
 
@@ -68,8 +67,9 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
             settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
             6, 40
         );
-        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
-        const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.length > 1 && groups.some(g => g !== "All" && g !== "(Blank)"));
+        // Reserve just enough room: font ascent (≈fontSize) + a small gap below the title
+        const titleReserve = hasPanelTitles ? Math.round(panelTitleFontSize + 6) : 0;
         const interPanelGap = groups.length > 1
             ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
             : 0;
@@ -139,18 +139,18 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                 .attr("class", "panel")
                 .attr("transform", `translate(${Math.round(margin.left + offsetX)}, ${Math.round(currentY + offsetY)})`);
 
-            // Group title with configurable spacing
-            if (settings.smallMultiples.showTitle && groupName !== "All") {
-                const titleSpacing = settings.smallMultiples.titleSpacing || 25;
+            // Group title — placed just above the grid with a small gap
+            if (settings.smallMultiples.showTitle && groups.length > 1 && groupName !== "All" && groupName !== "(Blank)") {
                 const titleFontSize = this.getEffectiveFontSize(
                     settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
                     6, 40
                 );
                 const displayTitle = formatLabel(groupName, chartWidth, titleFontSize);
+                // Position the text baseline so the title sits a few px above the grid
                 const title = panelGroup.append("text")
                     .attr("class", "panel-title")
                     .attr("x", 0)
-                    .attr("y", -Math.round(titleSpacing))
+                    .attr("y", -6)
                     .attr("font-size", `${titleFontSize}px`)
                     .attr("font-weight", "600")
                     .attr("fill", "#333")
@@ -186,8 +186,8 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                     const dataPoint = dataLookup.get(key);
                     const value = dataPoint?.value ?? 0;
 
-                    const x = Math.round(yHeaderWidth + xIndex * stepX);
-                    const y = Math.round(yIndex * stepY);
+                    const x = this.snapToPixelInt(yHeaderWidth + xIndex * stepX);
+                    const y = this.snapToPixelInt(yIndex * stepY);
                     const fill = value === 0 ? "#f0f0f0" : (colorScale(value) as string);
 
                     // Cell rectangle
@@ -195,8 +195,8 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                         .attr("class", "heatmap-cell")
                         .attr("x", x)
                         .attr("y", y)
-                        .attr("width", Math.round(cellWidth))
-                        .attr("height", Math.round(cellHeight))
+                        .attr("width", this.snapToPixelInt(cellWidth))
+                        .attr("height", this.snapToPixelInt(cellHeight))
                         .attr("rx", 3)
                         .attr("fill", fill)
                         .attr("stroke", "#ffffff")
@@ -212,7 +212,7 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
                         { displayName: "Value", value: formatMeasureValue(value, heatmapData.valueFormatString) },
                         { displayName: "Row", value: yDisplay },
                         { displayName: "Column", value: xDisplay },
-                        ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
+                        ...(groupName !== "All" && groupName !== "(Blank)" ? [{ displayName: "Group", value: groupName }] : [])
                     ], {
                         title: yPath[yPath.length - 1] ?? yKey,
                         subtitle: xDisplay,
@@ -225,8 +225,8 @@ export class HeatmapRenderer extends BaseRenderer<IHeatmapVisualSettings> {
 
                         panelGroup.append("text")
                             .attr("class", "cell-value")
-                            .attr("x", Math.round(x + cellWidth / 2))
-                            .attr("y", Math.round(y + cellHeight / 2))
+                            .attr("x", this.snapToPixelInt(x + cellWidth / 2))
+                            .attr("y", this.snapToPixelInt(y + cellHeight / 2))
                             .attr("dy", "0.35em")
                             .attr("text-anchor", "middle")
                             .attr("font-size", `${cellFontSize}px`)

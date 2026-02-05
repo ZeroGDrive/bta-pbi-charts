@@ -1,7 +1,6 @@
 "use strict";
 
-import * as d3 from "d3";
-import { BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
+import { d3, BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, measureMaxLabelWidth, formatMeasureValue } from "@pbi-visuals/shared";
 import { IStreamgraphVisualSettings } from "./settings";
 import { StreamgraphData } from "./StreamgraphTransformer";
 
@@ -56,7 +55,7 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
             6,
             40
         );
-        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.length > 1 && groups.some(g => g !== "All" && g !== "(Blank)"));
         const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
         const interPanelGap = groups.length > 1
             ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
@@ -87,7 +86,7 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                 .attr("transform", `translate(${margin.left}, ${currentY})`);
 
             // Group title with configurable spacing
-            if (settings.smallMultiples.showTitle && groupName !== "All") {
+            if (settings.smallMultiples.showTitle && groups.length > 1 && groupName !== "All" && groupName !== "(Blank)") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleBase = settings.smallMultiples.titleFontSize;
                 const titleRequested = settings.textSizes.panelTitleFontSize > 0 ? settings.textSizes.panelTitleFontSize : titleBase;
@@ -209,14 +208,14 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                             meta: { title: category, subtitle: xDisplayLabels[index], color: categoryColor },
                             tooltipData: [
                                 { displayName: "Value", value: formatMeasureValue(rawValue, streamData.valueFormatString) },
-                                ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
+                                ...(groupName !== "All" && groupName !== "(Blank)" ? [{ displayName: "Group", value: groupName }] : [])
                             ]
                         };
                     });
                 } else {
                     this.addTooltip(path as any, [
                         { displayName: "Category", value: category },
-                        ...(groupName !== "All" ? [{ displayName: "Group", value: groupName }] : [])
+                        ...(groupName !== "All" && groupName !== "(Blank)" ? [{ displayName: "Group", value: groupName }] : [])
                     ]);
                 }
             });
@@ -233,27 +232,46 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                     40
                 );
 
-                // Smart rotation detection
+                // Smart rotation detection — use the actual label spread (after xInset)
                 const rotationResult = calculateLabelRotation({
                     mode: settings.rotateXLabels,
                     labels: xDisplayLabels,
-                    availableWidth: chartWidth,
+                    availableWidth: chartWidth - 2 * xInset,
                     fontSize: xAxisFontSize,
                     fontFamily: settings.xAxisFontFamily
                 });
                 const shouldRotate = rotationResult.shouldRotate;
                 const skipInterval = rotationResult.skipInterval;
 
-                xValues.forEach((_, i) => {
-                    // Skip labels based on calculated interval, but always include last label
-                    if (skipInterval > 1 && i % skipInterval !== 0 && i !== xValues.length - 1) {
-                        return;
+                // Pre-compute the set of visible label indices so the last
+                // label is only shown when it doesn't collide with its neighbour.
+                const visibleXIndices: number[] = [];
+                for (let i = 0; i < xValues.length; i++) {
+                    if (skipInterval <= 1 || i % skipInterval === 0) {
+                        visibleXIndices.push(i);
                     }
+                }
+                const lastIdx = xValues.length - 1;
+                if (visibleXIndices.length > 0 && visibleXIndices[visibleXIndices.length - 1] !== lastIdx) {
+                    const prevIdx = visibleXIndices[visibleXIndices.length - 1];
+                    const stepSize = chartWidth / Math.max(1, xValues.length - 1);
+                    const gap = (lastIdx - prevIdx) * stepSize;
+                    const maxLabelW = measureMaxLabelWidth(
+                        [xDisplayLabels[prevIdx], xDisplayLabels[lastIdx]],
+                        xAxisFontSize,
+                        settings.xAxisFontFamily
+                    );
+                    if (gap >= maxLabelW + 4) {
+                        visibleXIndices.push(lastIdx);
+                    }
+                }
+                const visibleSet = new Set(visibleXIndices);
+
+                xValues.forEach((_, i) => {
+                    if (!visibleSet.has(i)) return;
 
                     const x = Math.round(xScale(i));
-                    const visibleCount = Math.ceil(xValues.length / Math.max(1, skipInterval));
-                    const spacePerLabel = chartWidth / Math.max(1, visibleCount);
-                    const displayText = formatLabel(xDisplayLabels[i], Math.max(0, spacePerLabel - 6), xAxisFontSize);
+
                     const text = xAxisGroup.append("text")
                         .attr("x", x)
                         .attr("y", shouldRotate ? 5 : 15)
@@ -263,19 +281,14 @@ export class StreamgraphRenderer extends BaseRenderer<IStreamgraphVisualSettings
                         .style("font-style", settings.xAxisItalic ? "italic" : "normal")
                         .style("text-decoration", settings.xAxisUnderline ? "underline" : "none")
                         .attr("fill", settings.xAxisColor)
-                        .text(displayText);
-
-                    if (displayText !== xDisplayLabels[i]) {
-                        this.addTooltip(text as any, [{ displayName: "X", value: xDisplayLabels[i] }]);
-                    }
+                        .text(xDisplayLabels[i]);
 
                     if (shouldRotate) {
                         text
                             .attr("transform", `rotate(-45, ${x}, 5)`)
                             .attr("text-anchor", "end");
                     } else {
-                        const anchor = i === 0 ? "start" : (i === xValues.length - 1 ? "end" : "middle");
-                        text.attr("text-anchor", anchor);
+                        text.attr("text-anchor", "middle");
                     }
                 });
             }

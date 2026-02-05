@@ -110,25 +110,51 @@ export function calculateLabelRotation(config: LabelRotationConfig): LabelRotati
         return { shouldRotate: mode === "always", skipInterval: 1 };
     }
 
-    const padding = 4; // Minimum padding between labels
+    const padding = 10; // Minimum padding between labels (generous to cover canvas↔SVG measurement drift)
     const maxWidth = measureMaxLabelWidth(labels, fontSize, fontFamily);
     const angleRad = (rotationAngle * Math.PI) / 180;
     const rotatedWidth = maxWidth * Math.cos(angleRad) + fontSize * Math.sin(angleRad);
 
-    const visibleLabelCount = (total: number, skip: number): number => {
-        if (total <= 0) return 0;
-        if (skip <= 1) return total;
-        const base = Math.ceil(total / skip); // indices 0, skip, 2*skip, ...
-        return ((total - 1) % skip === 0) ? base : base + 1; // always include last label
+    /**
+     * Build the array of visible label indices for a given skip interval.
+     * Always includes index 0 and the last index, plus every `skip`-th index.
+     */
+    const visibleIndices = (total: number, skip: number): number[] => {
+        if (total <= 0) return [];
+        if (skip <= 1) {
+            const arr: number[] = [];
+            for (let i = 0; i < total; i++) arr.push(i);
+            return arr;
+        }
+        const arr: number[] = [];
+        for (let i = 0; i < total; i += skip) arr.push(i);
+        if (arr[arr.length - 1] !== total - 1) arr.push(total - 1);
+        return arr;
     };
 
+    /**
+     * Check whether labels at the given skip interval fit without overlap.
+     * Instead of using an average spacing, we check the actual *minimum* gap
+     * between consecutive visible labels (which catches the forced last-label
+     * sitting right next to its predecessor).
+     */
     const findMinSkipThatFits = (effectiveLabelWidth: number): number => {
+        const needed = effectiveLabelWidth + padding;
         for (let skip = 1; skip <= labels.length; skip++) {
-            const count = visibleLabelCount(labels.length, skip);
-            const spacePerLabel = availableWidth / Math.max(1, count);
-            if ((effectiveLabelWidth + padding) <= spacePerLabel) {
-                return skip;
+            const indices = visibleIndices(labels.length, skip);
+            if (indices.length <= 1) return skip; // 0 or 1 label always fits
+
+            // Spacing per index step = availableWidth / (total - 1) for a
+            // linear / point scale that spans the full width.
+            const stepSize = availableWidth / Math.max(1, labels.length - 1);
+
+            let minGap = Infinity;
+            for (let j = 1; j < indices.length; j++) {
+                const gap = (indices[j] - indices[j - 1]) * stepSize;
+                if (gap < minGap) minGap = gap;
             }
+
+            if (needed <= minGap) return skip;
         }
         return labels.length;
     };
@@ -146,14 +172,13 @@ export function calculateLabelRotation(config: LabelRotationConfig): LabelRotati
         return { shouldRotate: false, skipInterval: skipNoRotate };
     }
 
-    // Auto mode - choose rotation vs skipping jointly:
-    // - Prefer showing more labels (smaller skip)
-    // - Prefer no rotation when skip is equal
+    // Auto mode — rotate only when it lets us show MORE labels:
+    // 1. All labels fit horizontally → no rotation needed.
+    // 2. Rotation eliminates all skipping → rotate (shows every label).
+    // 3. Rotation needs fewer skips than horizontal → rotate (shows more).
+    // 4. Both need the same skip count → stay horizontal (easier to read).
     if (skipNoRotate === 1) {
         return { shouldRotate: false, skipInterval: 1 };
-    }
-    if (skipRotate === 1) {
-        return { shouldRotate: true, skipInterval: 1 };
     }
     if (skipRotate < skipNoRotate) {
         return { shouldRotate: true, skipInterval: skipRotate };

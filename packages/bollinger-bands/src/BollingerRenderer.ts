@@ -1,7 +1,6 @@
 "use strict";
 
-import * as d3 from "d3";
-import { BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, formatMeasureValue } from "@pbi-visuals/shared";
+import { d3, BaseRenderer, RenderContext, ChartData, calculateLabelRotation, formatLabel, formatMeasureValue, measureMaxLabelWidth } from "@pbi-visuals/shared";
 import { IBollingerVisualSettings } from "./settings";
 import { BollingerChartData, BollingerDataPoint } from "./BollingerTransformer";
 
@@ -34,7 +33,7 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
             6,
             40
         );
-        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.some(g => g !== "All"));
+        const hasPanelTitles = Boolean(settings.smallMultiples.showTitle && groups.length > 1 && groups.some(g => g !== "All" && g !== "(Blank)"));
         const titleReserve = hasPanelTitles ? Math.round(titleSpacing + panelTitleFontSize + 8) : 0;
         const interPanelGap = groups.length > 1
             ? (hasPanelTitles ? Math.max(settings.smallMultiples.spacing, titleReserve) : settings.smallMultiples.spacing)
@@ -111,7 +110,7 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                 .attr("transform", `translate(${margin.left}, ${currentY})`);
 
             // Panel title
-            if (settings.smallMultiples.showTitle && groupName !== "All") {
+            if (settings.smallMultiples.showTitle && groups.length > 1 && groupName !== "All" && groupName !== "(Blank)") {
                 const titleSpacing = settings.smallMultiples.titleSpacing || 25;
                 const titleFontSize = this.getEffectiveFontSize(
                     settings.textSizes.panelTitleFontSize || settings.smallMultiples.titleFontSize,
@@ -211,8 +210,8 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                 .attr("class", "grid-line")
                 .attr("x1", 0)
                 .attr("x2", chartWidth)
-                .attr("y1", d => yScale(d))
-                .attr("y2", d => yScale(d))
+                .attr("y1", d => this.snapToPixel(yScale(d)))
+                .attr("y2", d => this.snapToPixel(yScale(d)))
                 .attr("stroke", "#e5e7eb")
                 .attr("stroke-width", 1)
                 .attr("stroke-dasharray", "3,3");
@@ -450,18 +449,20 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                         return { tooltipData: [], meta: { title: "" } };
                     }
 
+                    const tooltipRows: { displayName: string; value: string; color?: string }[] = [
+                        { displayName: "Price", value: formatNumber(point.value), color: bollinger.priceLineColor }
+                    ];
+                    if (point.sma !== null) tooltipRows.push({ displayName: "SMA", value: formatNumber(point.sma), color: bollinger.middleBandColor });
+                    if (point.upper !== null) tooltipRows.push({ displayName: "Upper Band", value: formatNumber(point.upper), color: bollinger.upperBandColor });
+                    if (point.lower !== null) tooltipRows.push({ displayName: "Lower Band", value: formatNumber(point.lower), color: bollinger.lowerBandColor });
+
                     return {
                         meta: {
                             title: dateLabel,
-                            subtitle: groupName !== "All" ? groupName : undefined,
+                            subtitle: (groupName !== "All" && groupName !== "(Blank)") ? groupName : undefined,
                             color: bollinger.priceLineColor
                         },
-                        tooltipData: [
-                            { displayName: "Price", value: formatNumber(point.value), color: bollinger.priceLineColor },
-                            { displayName: "SMA", value: formatNumber(point.sma), color: bollinger.middleBandColor },
-                            { displayName: "Upper Band", value: formatNumber(point.upper), color: bollinger.upperBandColor },
-                            { displayName: "Lower Band", value: formatNumber(point.lower), color: bollinger.lowerBandColor }
-                        ]
+                        tooltipData: tooltipRows
                     };
                 });
 
@@ -503,14 +504,16 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                         const point = hover.points[0]?.point;
                         if (!point) return;
 
+                        const nativeRows: { displayName: string; value: string; color?: string }[] = [
+                            { displayName: "Date", value: dateLabel },
+                            { displayName: "Price", value: formatNumber(point.value), color: bollinger.priceLineColor }
+                        ];
+                        if (point.sma !== null) nativeRows.push({ displayName: "SMA", value: formatNumber(point.sma), color: bollinger.middleBandColor });
+                        if (point.upper !== null) nativeRows.push({ displayName: "Upper Band", value: formatNumber(point.upper), color: bollinger.upperBandColor });
+                        if (point.lower !== null) nativeRows.push({ displayName: "Lower Band", value: formatNumber(point.lower), color: bollinger.lowerBandColor });
+
                         this.context.tooltipService.show({
-                            dataItems: [
-                                { displayName: "Date", value: dateLabel },
-                                { displayName: "Price", value: formatNumber(point.value), color: bollinger.priceLineColor },
-                                { displayName: "SMA", value: formatNumber(point.sma), color: bollinger.middleBandColor },
-                                { displayName: "Upper Band", value: formatNumber(point.upper), color: bollinger.upperBandColor },
-                                { displayName: "Lower Band", value: formatNumber(point.lower), color: bollinger.lowerBandColor }
-                            ],
+                            dataItems: nativeRows,
                             identities: [],
                             coordinates: [event.clientX, event.clientY],
                             isTouchEvent: false
@@ -562,27 +565,46 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                     6, 40
                 );
 
-                // Smart rotation detection
+                // Smart rotation detection — use the actual label spread (after xInset)
                 const rotationResult = calculateLabelRotation({
                     mode: settings.rotateXLabels,
                     labels: xDisplayLabels,
-                    availableWidth: chartWidth,
+                    availableWidth: chartWidth - 2 * xInset,
                     fontSize: xAxisFontSize,
                     fontFamily: settings.xAxisFontFamily
                 });
                 const shouldRotate = rotationResult.shouldRotate;
                 const skipInterval = rotationResult.skipInterval;
 
-                xValues.forEach((_, i) => {
-                    // Skip labels based on calculated interval
-                    if (skipInterval > 1 && i % skipInterval !== 0 && i !== xValues.length - 1) {
-                        return;
+                // Pre-compute the set of visible label indices so the last
+                // label is only shown when it doesn't collide with its neighbour.
+                const visibleXIndices: number[] = [];
+                for (let i = 0; i < xValues.length; i++) {
+                    if (skipInterval <= 1 || i % skipInterval === 0) {
+                        visibleXIndices.push(i);
                     }
+                }
+                // Add the last index only if it has enough room
+                const lastIdx = xValues.length - 1;
+                if (visibleXIndices.length > 0 && visibleXIndices[visibleXIndices.length - 1] !== lastIdx) {
+                    const prevIdx = visibleXIndices[visibleXIndices.length - 1];
+                    const stepSize = chartWidth / Math.max(1, xValues.length - 1);
+                    const gap = (lastIdx - prevIdx) * stepSize;
+                    const maxLabelW = measureMaxLabelWidth(
+                        [xDisplayLabels[prevIdx], xDisplayLabels[lastIdx]],
+                        xAxisFontSize,
+                        settings.xAxisFontFamily
+                    );
+                    if (gap >= maxLabelW + 4) {
+                        visibleXIndices.push(lastIdx);
+                    }
+                }
+                const visibleSet = new Set(visibleXIndices);
+
+                xValues.forEach((_, i) => {
+                    if (!visibleSet.has(i)) return;
 
                     const x = Math.round(xScale(i));
-                    const visibleCount = Math.ceil(xValues.length / Math.max(1, skipInterval));
-                    const spacePerLabel = chartWidth / Math.max(1, visibleCount);
-                    const displayText = formatLabel(xDisplayLabels[i], Math.max(0, spacePerLabel - 6), xAxisFontSize);
 
                     const text = xAxisGroup.append("text")
                         .attr("x", x)
@@ -593,19 +615,14 @@ export class BollingerRenderer extends BaseRenderer<IBollingerVisualSettings> {
                         .style("font-style", settings.xAxisItalic ? "italic" : "normal")
                         .style("text-decoration", settings.xAxisUnderline ? "underline" : "none")
                         .attr("fill", settings.xAxisColor)
-                        .text(displayText);
-
-                    if (displayText !== xDisplayLabels[i]) {
-                        this.addTooltip(text as any, [{ displayName: "Date", value: xDisplayLabels[i] }]);
-                    }
+                        .text(xDisplayLabels[i]);
 
                     if (shouldRotate) {
                         text
                             .attr("transform", `rotate(-45, ${x}, 5)`)
                             .attr("text-anchor", "end");
                     } else {
-                        const anchor = i === 0 ? "start" : (i === xValues.length - 1 ? "end" : "middle");
-                        text.attr("text-anchor", anchor);
+                        text.attr("text-anchor", "middle");
                     }
                 });
             }
