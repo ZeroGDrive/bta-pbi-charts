@@ -1,6 +1,6 @@
 {
   "name": "@pbi-visuals/heatmap",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "scripts": {
     "start": "node ../../scripts/pbiviz-wrapper.mjs start",
     "package": "node ../../scripts/pbiviz-wrapper.mjs package",

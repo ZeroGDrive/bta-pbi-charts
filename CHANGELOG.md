@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.2 - 2026-02-09
+
+### Fixed
+- All visuals: Values role now supports Power BI field parameters (declared as `GroupingOrMeasure` instead of `Measure`) so measures can be switched dynamically via slicers.
+
 ## v1.2.1 - 2026-02-09
 
 ### Added

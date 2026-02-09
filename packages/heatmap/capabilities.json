@@ -21,7 +21,7 @@
     {
       "displayName": "Values",
       "name": "values",
-      "kind": "Measure",
+      "kind": "GroupingOrMeasure",
       "description": "The measure to display at each point"
     }
   ],
