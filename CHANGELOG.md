@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.1 - 2026-02-09
+
+### Added
+- Heatmap: optional horizontal/vertical scrolling with pinned axes and labels for easier navigation on large matrices.
+- Heatmap: alignment and margin controls for better layout tuning in constrained viewports.
+
+### Fixed
+- Heatmap: tooltip hit-testing and positioning now stay correct while scrolling.
+
 ## v1.2.0 - 2026-02-05
 
 ### Added
