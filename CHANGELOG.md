@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.3 - 2026-02-10
+
+### Fixed
+- All visuals: Tooltip value label now uses the bound measure's display name (from the Values field well) instead of always showing "Value".
+
 ## v1.2.2 - 2026-02-09
 
 ### Fixed
