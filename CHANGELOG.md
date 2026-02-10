@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.3.0 - 2026-02-10
+
+### Added
+- New visual: Inline Labels Line (inline end labels per series, last-2 markers, optional area fill, optional value labels at each stop).
+- Inline Labels Line: Point Values option (on by default) to show the value at each data point (with auto density).
+
+### Changed
+- Inline Labels Line: X-Axis now supports up to 2 fields; if Legend is empty, the 2nd X-Axis field is used as the series split.
+- Inline Labels Line: Values is no longer required to start building field wells (you can add X-Axis first).
+
+### Fixed
+- Inline Labels Line, Streamgraph, Bump Chart, Donut Chart: Data Colors pane now matches the initial rendered series colors (no mismatch until a user override is set).
+
 ## v1.2.3 - 2026-02-10
 
 ### Fixed

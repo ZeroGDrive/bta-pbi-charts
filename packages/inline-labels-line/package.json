@@ -1,6 +1,6 @@
 {
   "name": "@pbi-visuals/inline-labels-line",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "scripts": {
     "start": "node ../../scripts/pbiviz-wrapper.mjs start",
     "package": "node ../../scripts/pbiviz-wrapper.mjs package",
