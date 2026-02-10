@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.4.0 - 2026-02-10
+
+### Added
+- Inline Labels Line: Secondary measure (Value 2) support with stacked point value labels.
+- Inline Labels Line: Secondary Y-Axis for Value 2 (right-side) with formatting settings.
+- Inline Labels Line: Point Values "Inside Line" placement with halo (stroke cut-out effect).
+- Inline Labels Line: Point Values styling for Value 2 (separate font size, color, and line gap).
+
+### Changed
+- Inline Labels Line: When Value 2 is bound, Point Values and Value 2 labels auto-enable by default (unless explicitly overridden).
+- Inline Labels Line: Grey past styling adjusted for clearer contrast and modern look.
+
 ## v1.3.0 - 2026-02-10
 
 ### Added
