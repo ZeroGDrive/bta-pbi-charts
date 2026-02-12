@@ -8,7 +8,7 @@ import IColorPalette = powerbi.extensibility.IColorPalette;
 import ISandboxExtendedColorPalette = powerbi.extensibility.ISandboxExtendedColorPalette;
 import VisualTooltipDataItem = powerbi.extensibility.VisualTooltipDataItem;
 import { IBaseVisualSettings, colorSchemes } from "./settings";
-import { formatLabel, measureMaxLabelWidth } from "./textUtils";
+import { measureMaxLabelWidth } from "./textUtils";
 import { formatMeasureValue } from "./utils";
 import { renderEmptyState } from "./emptyState";
 import { HtmlTooltip, TooltipMeta, toTooltipRows } from "./tooltip";
@@ -408,6 +408,8 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         legendWidth?: number;   // gradient legends
         legendHeight?: number;  // gradient legends
         legendFontSize?: number;
+        availableWidth?: number;
+        availableHeight?: number;
     }): { top: number; right: number; bottom: number; left: number } {
         const position = this.settings.legendPosition || "topRight";
         const textSizesLegend = (this.settings as any)?.textSizes?.legendFontSize;
@@ -418,7 +420,10 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         const maxLegendItems = this.settings.maxLegendItems || 10;
 
         const metrics = options.isOrdinal
-            ? this.computeOrdinalLegendMetrics(options.categories ?? [], position, legendFontSize, maxLegendItems)
+            ? this.computeOrdinalLegendMetrics(options.categories ?? [], position, legendFontSize, maxLegendItems, {
+                availableWidth: options.availableWidth,
+                availableHeight: options.availableHeight
+            })
             : this.computeGradientLegendMetrics(position, legendFontSize, options.legendWidth ?? 140, options.legendHeight ?? 12);
 
         if (!metrics) return { top: 0, right: 0, bottom: 0, left: 0 };
@@ -471,7 +476,11 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         categories: string[],
         position: string,
         legendFontSize: number,
-        maxLegendItems: number
+        maxLegendItems: number,
+        bounds?: {
+            availableWidth?: number;
+            availableHeight?: number;
+        }
     ): {
         dock: "top" | "bottom" | "left" | "right";
         align: "start" | "middle" | "end";
@@ -493,8 +502,10 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
 
         const padX = 12;
         const padY = 12;
-        const availableWidth = Math.max(0, this.context.width - padX * 2);
-        const availableHeight = Math.max(0, this.context.height - padY * 2);
+        const boundedWidth = bounds?.availableWidth ?? this.context.width;
+        const boundedHeight = bounds?.availableHeight ?? this.context.height;
+        const availableWidth = Math.max(0, boundedWidth - padX * 2);
+        const availableHeight = Math.max(0, boundedHeight - padY * 2);
 
         const swatchWidth = 12;
         const gap = 6;
@@ -504,13 +515,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         const maxLabelWidth = Math.max(0, Math.ceil(measureMaxLabelWidth(items, legendFontSize, "Segoe UI")));
 
         const itemWidthMin = 88;
-        const itemWidthCap = 170;
-        const textWidthCap = 130;
-
-        const colWidth = Math.min(
-            itemWidthCap,
-            Math.max(itemWidthMin, swatchWidth + gap + Math.min(textWidthCap, maxLabelWidth) + reservedTextPad)
-        );
+        const colWidth = Math.max(itemWidthMin, swatchWidth + gap + maxLabelWidth + reservedTextPad);
 
         if (dock === "left" || dock === "right" || isVertical) {
             // For stacked legends docked to top/bottom, cap legend height so it doesn't consume the full viewport.
@@ -525,7 +530,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                 align,
                 vAlign,
                 isVertical: true,
-                width: Math.min(availableWidth, cols * colWidth),
+                width: cols * colWidth,
                 height: Math.min(heightCap, itemsPerCol * rowHeight),
                 itemsPerRow: 1,
                 itemsPerCol,
@@ -544,7 +549,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
             align,
             vAlign,
             isVertical: false,
-            width: Math.min(availableWidth, itemsPerRow * colWidth),
+            width: itemsPerRow * colWidth,
             height: rows * rowHeight,
             itemsPerRow,
             itemsPerCol: 1,
@@ -627,7 +632,11 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         categories?: string[],
         customY?: number,
         customGradientColors?: { min: string; max: string },
-        layout?: { alignFrame?: LegendAlignFrame }
+        layout?: {
+            alignFrame?: LegendAlignFrame;
+            availableWidth?: number;
+            availableHeight?: number;
+        }
     ): void {
         const legendWidth = 140;
         const legendHeight = 12;
@@ -641,7 +650,10 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
         if (isOrdinal && categories) {
             // Categorical legend (color swatches with labels)
             const ordinalScale = colorScale as d3.ScaleOrdinal<string, string, never>;
-            const metrics = this.computeOrdinalLegendMetrics(categories, position, legendFontSize, maxLegendItems);
+            const metrics = this.computeOrdinalLegendMetrics(categories, position, legendFontSize, maxLegendItems, {
+                availableWidth: layout?.availableWidth,
+                availableHeight: layout?.availableHeight
+            });
             if (!metrics) return;
 
             const baseOrigin = this.getLegendOrigin(metrics, layout?.alignFrame);
@@ -655,7 +667,6 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
             const swatch = 12;
             const gap = 6;
             const textOffsetX = swatch + gap + 4;
-            const maxTextWidth = Math.max(0, metrics.colWidth - textOffsetX - 8);
 
             const items = categories.slice(0, maxLegendItems);
 
@@ -665,7 +676,6 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
 
                 const itemX = col * metrics.colWidth;
                 const itemY = row * metrics.rowHeight;
-                const displayText = formatLabel(cat, maxTextWidth, legendFontSize);
 
                 const itemGroup = legendGroup.append("g")
                     .attr("class", "color-legend-item")
@@ -684,11 +694,7 @@ export abstract class BaseRenderer<TSettings extends IBaseVisualSettings = IBase
                     .attr("y", Math.round(metrics.rowHeight / 2 + legendFontSize / 2 - 2))
                     .attr("font-size", `${legendFontSize}px`)
                     .attr("fill", this.getThemeForeground("#6b7280"))
-                    .text(displayText);
-
-                if (displayText !== cat) {
-                    this.addTooltip(itemGroup as any, [{ displayName: "Category", value: cat }], { title: cat, color: ordinalScale(cat) });
-                }
+                    .text(cat);
             });
         } else {
             // Gradient legend (for heatmaps, etc.)

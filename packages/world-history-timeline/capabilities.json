@@ -4,31 +4,25 @@
       "displayName": "Category",
       "name": "civilization",
       "kind": "Grouping",
-      "description": "Label for each timeline bar"
+      "description": "Label for each timeline bar (supports hierarchy levels)"
     },
     {
       "displayName": "Legend",
       "name": "region",
       "kind": "Grouping",
-      "description": "Color grouping for timeline bars"
-    },
-    {
-      "displayName": "Group",
-      "name": "era",
-      "kind": "Grouping",
-      "description": "Optional categorical field used for tooltips and sorting context"
+      "description": "Color grouping for timeline bars (supports hierarchy levels)"
     },
     {
       "displayName": "Start",
       "name": "startYear",
-      "kind": "Measure",
-      "description": "Numeric start year (negative for BCE)"
+      "kind": "GroupingOrMeasure",
+      "description": "Start date or numeric year (supports hierarchy levels)"
     },
     {
       "displayName": "End",
       "name": "endYear",
-      "kind": "Measure",
-      "description": "Numeric end year (negative for BCE)"
+      "kind": "GroupingOrMeasure",
+      "description": "End date or numeric year (supports hierarchy levels)"
     }
   ],
   "tooltips": {
@@ -56,9 +50,17 @@
           "type": {
             "enumeration": [
               { "value": "time", "displayName": "Start Time" },
-              { "value": "region", "displayName": "Region" }
+              { "value": "region", "displayName": "Region" },
+              { "value": "category", "displayName": "Category" },
+              { "value": "end", "displayName": "End Time" },
+              { "value": "duration", "displayName": "Duration" }
             ]
           }
+        },
+        "sortOptions": {
+          "displayName": "Sort Options",
+          "description": "Comma-separated list: region,time,category,end,duration",
+          "type": { "text": true }
         },
         "lanePadding": {
           "displayName": "Lane Padding",
@@ -82,6 +84,10 @@
         },
         "showCrosshair": {
           "displayName": "Show Crosshair",
+          "type": { "bool": true }
+        },
+        "showTodayLine": {
+          "displayName": "Show Today Line",
           "type": { "bool": true }
         },
         "showLabels": {
@@ -320,11 +326,10 @@
     {
       "conditions": [
         {
-          "civilization": { "max": 1 },
-          "region": { "max": 1 },
-          "era": { "max": 1 },
-          "startYear": { "max": 1 },
-          "endYear": { "max": 1 }
+          "civilization": { "max": 5 },
+          "region": { "max": 5 },
+          "startYear": { "max": 5 },
+          "endYear": { "max": 5 }
         }
       ],
       "categorical": {
@@ -332,7 +337,8 @@
           "select": [
             { "for": { "in": "civilization" } },
             { "for": { "in": "region" } },
-            { "for": { "in": "era" } }
+            { "for": { "in": "startYear" } },
+            { "for": { "in": "endYear" } }
           ],
           "dataReductionAlgorithm": {
             "top": { "count": 30000 }

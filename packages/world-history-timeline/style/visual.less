@@ -54,3 +54,106 @@
         font-weight: 500;
     }
 }
+
+.timeline-sort-control {
+    position: sticky;
+    top: 10px;
+    left: 10px;
+    z-index: 25;
+    width: max-content;
+    color: #111827;
+    pointer-events: auto;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .timeline-sort-title {
+        font-size: 11px;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1;
+        color: #374151;
+    }
+
+    .timeline-sort-trigger {
+        border: 1px solid rgba(17, 24, 39, 0.14);
+        background: #ffffff;
+        color: #111827;
+        border-radius: 10px;
+        box-shadow: none;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: lowercase;
+        cursor: pointer;
+        min-width: 90px;
+        text-align: left;
+        line-height: 1.1;
+    }
+
+    .timeline-sort-trigger:disabled {
+        cursor: default;
+        opacity: 0.7;
+    }
+
+    .timeline-sort-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        border: 1px solid rgba(17, 24, 39, 0.14);
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(17, 24, 39, 0.12);
+        padding: 6px;
+        min-width: 120px;
+    }
+
+    &[data-open="true"] .timeline-sort-menu {
+        display: block;
+    }
+
+    .timeline-sort-option {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        width: 100%;
+        border-radius: 8px;
+        padding: 8px 10px;
+        text-align: left;
+        font-size: 12px;
+        line-height: 1.2;
+        color: #111827;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .timeline-sort-option:hover {
+        background: rgba(17, 24, 39, 0.06);
+    }
+
+    .timeline-sort-option.is-active {
+        font-weight: 700;
+    }
+
+    .timeline-sort-option.is-disabled {
+        color: #9ca3af;
+        cursor: not-allowed;
+    }
+
+    .timeline-sort-option.is-disabled:hover {
+        background: transparent;
+    }
+
+    .timeline-sort-check {
+        width: 10px;
+        opacity: 0;
+    }
+
+    .timeline-sort-option.is-active .timeline-sort-check {
+        opacity: 1;
+    }
+}

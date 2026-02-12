@@ -50,21 +50,53 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
             6,
             40
         );
+        const legendAvailableWidth = Math.max(120, (this.context.root?.clientWidth || this.context.width) - 16);
+        const legendAvailableHeight = Math.max(80, (this.context.root?.clientHeight || this.context.height) - 16);
 
         const hasLegend = settings.showLegend && timelineData.hasRegionRoleData && timelineData.regions.length > 0;
         const legendReserve = hasLegend
-            ? this.getLegendReservation({ isOrdinal: true, categories: timelineData.regions, legendFontSize })
+            ? this.getLegendReservation({
+                isOrdinal: true,
+                categories: timelineData.regions,
+                legendFontSize,
+                availableWidth: legendAvailableWidth,
+                availableHeight: legendAvailableHeight
+            })
             : { top: 0, right: 0, bottom: 0, left: 0 };
 
         const sortedItems = [...timelineData.items].sort((a, b) => {
-            if (settings.timeline.sortBy === "region") {
-                const regionCmp = a.region.localeCompare(b.region);
-                if (regionCmp !== 0) return regionCmp;
+            const timeCompare = (): number => {
+                const startCmp = a.startYear - b.startYear;
+                if (startCmp !== 0) return startCmp;
+                return a.endYear - b.endYear;
+            };
+
+            switch (settings.timeline.sortBy) {
+                case "region": {
+                    const regionCmp = a.region.localeCompare(b.region);
+                    if (regionCmp !== 0) return regionCmp;
+                    break;
+                }
+                case "category": {
+                    const categoryCmp = a.civilization.localeCompare(b.civilization);
+                    if (categoryCmp !== 0) return categoryCmp;
+                    break;
+                }
+                case "end": {
+                    const endCmp = a.endYear - b.endYear;
+                    if (endCmp !== 0) return endCmp;
+                    break;
+                }
+                case "duration": {
+                    const durationCmp = b.duration - a.duration;
+                    if (durationCmp !== 0) return durationCmp;
+                    break;
+                }
+                default:
+                    break;
             }
 
-            const startCmp = a.startYear - b.startYear;
-            if (startCmp !== 0) return startCmp;
-            return a.endYear - b.endYear;
+            return timeCompare();
         });
 
         const rows: TimelineRow[] = sortedItems.map((point, idx) => ({
@@ -77,9 +109,10 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
 
         const topAxisReserve = settings.showXAxis && settings.timeline.showTopAxis ? Math.round(axisFontSize + 18) : 0;
         const bottomAxisReserve = settings.showXAxis && settings.timeline.showBottomAxis ? Math.round(axisFontSize + 18) : 0;
+        const sortControlReserve = Math.max(0, Number((settings.timeline as any).sortControlReservePx ?? 0));
 
         const margin = {
-            top: 10 + legendReserve.top + topAxisReserve,
+            top: 10 + legendReserve.top + topAxisReserve + sortControlReserve,
             right: 14 + legendReserve.right,
             bottom: 10 + legendReserve.bottom + bottomAxisReserve,
             left: leftLabelSpace + legendReserve.left
@@ -94,9 +127,11 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
 
         let minYear = Math.min(timelineData.minYear, timelineData.maxYear);
         let maxYear = Math.max(timelineData.minYear, timelineData.maxYear);
+        const isDateScale = timelineData.timeScaleMode === "date";
         if (minYear === maxYear) {
-            minYear -= 1;
-            maxYear += 1;
+            const singlePointPadding = isDateScale ? 24 * 60 * 60 * 1000 : 1;
+            minYear -= singlePointPadding;
+            maxYear += singlePointPadding;
         }
 
         const xScale = d3.scaleLinear()
@@ -122,6 +157,68 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
         const formatYear = (value: number): string => {
             const year = Math.round(value);
             return year < 0 ? `${Math.abs(year)} BC` : `${year}`;
+        };
+        const timeSpanMs = Math.max(1, maxYear - minYear);
+        const axisDateFormatter = (() => {
+            if (timeSpanMs >= 1000 * 60 * 60 * 24 * 365 * 25) {
+                return new Intl.DateTimeFormat(undefined, { year: "numeric" });
+            }
+            if (timeSpanMs >= 1000 * 60 * 60 * 24 * 365 * 2) {
+                return new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" });
+            }
+            return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
+        })();
+        const tooltipDateFormatter = new Intl.DateTimeFormat(undefined, {
+            month: "short",
+            day: "numeric",
+            year: "numeric"
+        });
+        const formatTimelineValue = (value: number): string => {
+            if (!isDateScale) {
+                return formatYear(value);
+            }
+            return axisDateFormatter.format(new Date(value));
+        };
+        const formatTooltipDateValue = (value: number): string => {
+            if (!isDateScale) {
+                return formatYear(value);
+            }
+            return tooltipDateFormatter.format(new Date(value));
+        };
+        const formatDuration = (duration: number): string => {
+            if (!isDateScale) {
+                return formatMeasureValue(duration);
+            }
+
+            const milliseconds = Math.max(0, duration);
+            const day = 24 * 60 * 60 * 1000;
+            const month = day * 30.4375;
+            const year = day * 365.25;
+
+            if (milliseconds >= year) {
+                const years = milliseconds / year;
+                return `${years.toLocaleString(undefined, { maximumFractionDigits: years >= 10 ? 0 : 1 })} years`;
+            }
+            if (milliseconds >= month) {
+                const months = milliseconds / month;
+                return `${months.toLocaleString(undefined, { maximumFractionDigits: months >= 10 ? 0 : 1 })} months`;
+            }
+            if (milliseconds >= day) {
+                const days = Math.round(milliseconds / day);
+                return `${days.toLocaleString()} days`;
+            }
+
+            const hours = milliseconds / (60 * 60 * 1000);
+            if (hours >= 1) {
+                return `${Math.round(hours).toLocaleString()} hours`;
+            }
+
+            const minutes = milliseconds / (60 * 1000);
+            if (minutes >= 1) {
+                return `${Math.round(minutes).toLocaleString()} minutes`;
+            }
+
+            return `${Math.round(milliseconds / 1000).toLocaleString()} seconds`;
         };
 
         const rawTicks = xScale.ticks(Math.max(2, Math.floor(chartWidth / 110)));
@@ -184,8 +281,8 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
             // - initial (scrollTop=0): axis sits below top legend reservation
             // - after scrolling past that reservation: axis snaps to top edge
             const pinnedTopBaseY = -margin.top;
-            const stickyOffset = Math.max(0, Math.round(legendReserve.top));
-            const pinnedTopOffset = Math.max(0, Math.round(legendReserve.top));
+            const stickyOffset = Math.max(0, Math.round(legendReserve.top + sortControlReserve));
+            const pinnedTopOffset = Math.max(0, Math.round(legendReserve.top + sortControlReserve));
             const axisBaselineY = Math.max(12, headerPadTop - 2);
 
             topAxisGroup = panel.append("g")
@@ -232,7 +329,7 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
                     .style("font-style", settings.xAxisItalic ? "italic" : "normal")
                     .style("text-decoration", settings.xAxisUnderline ? "underline" : "none")
                     .attr("fill", axisTextColor)
-                    .text(formatYear(tick));
+                    .text(formatTimelineValue(tick));
             });
 
             topAxisGroup.append("line")
@@ -278,7 +375,7 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
                     .style("font-style", settings.xAxisItalic ? "italic" : "normal")
                     .style("text-decoration", settings.xAxisUnderline ? "underline" : "none")
                     .attr("fill", axisTextColor)
-                    .text(formatYear(tick));
+                    .text(formatTimelineValue(tick));
             });
         }
 
@@ -337,17 +434,14 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
 
             const rows: Array<{ displayName: string; value: string; color?: string }> = [
                 { displayName: "Region", value: point.region, color: fill },
-                { displayName: "Start", value: formatYear(point.startYear) },
-                { displayName: "End", value: formatYear(point.endYear) },
-                { displayName: "Duration", value: formatMeasureValue(point.duration) }
+                { displayName: "Start", value: formatTooltipDateValue(point.startYear) },
+                { displayName: "End", value: formatTooltipDateValue(point.endYear) },
+                { displayName: "Duration", value: formatDuration(point.duration) }
             ];
-            if (point.era && point.era !== "All" && point.era !== "(Blank)") {
-                rows.push({ displayName: "Era", value: point.era });
-            }
 
             this.addTooltip(bar as any, rows, {
                 title: point.civilization,
-                subtitle: `${formatYear(point.startYear)} to ${formatYear(point.endYear)}`,
+                subtitle: `${formatTooltipDateValue(point.startYear)} to ${formatTooltipDateValue(point.endYear)}`,
                 color: fill
             });
 
@@ -411,6 +505,43 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
             }
         });
 
+        if (settings.timeline.showTodayLine) {
+            const todayValue = isDateScale ? Date.now() : new Date().getFullYear();
+            if (todayValue >= minYear && todayValue <= maxYear) {
+                const todayX = this.snapToPixel(xScale(todayValue));
+                const todayColor = this.isHighContrastMode()
+                    ? this.getThemeForegroundSelected("#b91c1c")
+                    : "#dc2626";
+                const labelPadding = 4;
+                const useEndAnchor = todayX > chartWidth - 72;
+                const labelX = useEndAnchor ? todayX - labelPadding : todayX + labelPadding;
+
+                panel.append("line")
+                    .attr("class", "timeline-today-line")
+                    .attr("x1", todayX)
+                    .attr("x2", todayX)
+                    .attr("y1", 0)
+                    .attr("y2", chartHeight)
+                    .attr("stroke", todayColor)
+                    .attr("stroke-width", 1.5)
+                    .attr("stroke-dasharray", "5,4")
+                    .attr("stroke-opacity", this.isHighContrastMode() ? 1 : 0.9)
+                    .style("pointer-events", "none");
+
+                panel.append("text")
+                    .attr("class", "timeline-today-label")
+                    .attr("x", this.snapToPixelInt(labelX))
+                    .attr("y", 12)
+                    .attr("text-anchor", useEndAnchor ? "end" : "start")
+                    .attr("font-size", `${Math.max(9, axisFontSize - 1)}px`)
+                    .attr("font-family", settings.xAxisFontFamily)
+                    .style("font-weight", "600")
+                    .attr("fill", todayColor)
+                    .text("Today")
+                    .style("pointer-events", "none");
+            }
+        }
+
         if (settings.timeline.showCrosshair) {
             const crosshair = panel.append("line")
                 .attr("class", "timeline-crosshair")
@@ -448,7 +579,9 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
                     y: margin.top,
                     width: chartWidth,
                     height: chartHeight
-                }
+                },
+                availableWidth: legendAvailableWidth,
+                availableHeight: legendAvailableHeight
             });
 
             // Make the legend sticky in viewport space (handled by visual scroll sync).
@@ -485,7 +618,7 @@ export class WorldHistoryTimelineRenderer extends BaseRenderer<IWorldHistoryTime
 
             // Keep axis glued to the legend (no vertical gap) while scrolling.
             if (topAxisGroup) {
-                const axisTop = Math.max(0, Math.round(stickyLegendBottom));
+                const axisTop = Math.max(0, Math.round(stickyLegendBottom + sortControlReserve));
                 topAxisGroup
                     .attr("data-pin-top", `${axisTop}`)
                     .attr("data-sticky-offset", `${axisTop}`);

@@ -15,16 +15,19 @@ import {
     TooltipTheme
 } from "@pbi-visuals/shared";
 
-export type TimelineSortMode = "time" | "region";
+export type TimelineSortMode = "time" | "region" | "category" | "end" | "duration";
 
 export interface IWorldHistoryTimelineSettings {
     sortBy: TimelineSortMode;
+    sortOptions: string;
+    sortControlReservePx?: number;
     lanePadding: number;
     barCornerRadius: number;
     minBarWidth: number;
     showTopAxis: boolean;
     showBottomAxis: boolean;
     showCrosshair: boolean;
+    showTodayLine: boolean;
     showLabels: boolean;
 }
 
@@ -68,12 +71,14 @@ export const defaultSettings: IWorldHistoryTimelineVisualSettings = {
     smallMultiples: { ...defaultSmallMultiplesSettings },
     timeline: {
         sortBy: "time",
+        sortOptions: "region,time",
         lanePadding: 0.32,
         barCornerRadius: 2,
         minBarWidth: 1,
         showTopAxis: true,
         showBottomAxis: true,
         showCrosshair: true,
+        showTodayLine: true,
         showLabels: true
     },
     textSizes: {
@@ -189,13 +194,18 @@ export function parseSettings(dataView: DataView): IWorldHistoryTimelineVisualSe
     const timelineObj = objects["timelineSettings"];
     if (timelineObj) {
         settings.timeline.sortBy = (timelineObj["sortBy"] as TimelineSortMode) ?? defaultSettings.timeline.sortBy;
+        settings.timeline.sortOptions = (timelineObj["sortOptions"] as string) ?? defaultSettings.timeline.sortOptions;
         settings.timeline.lanePadding = (timelineObj["lanePadding"] as number) ?? defaultSettings.timeline.lanePadding;
         settings.timeline.barCornerRadius = (timelineObj["barCornerRadius"] as number) ?? defaultSettings.timeline.barCornerRadius;
         settings.timeline.minBarWidth = (timelineObj["minBarWidth"] as number) ?? defaultSettings.timeline.minBarWidth;
         settings.timeline.showTopAxis = (timelineObj["showTopAxis"] as boolean) ?? defaultSettings.timeline.showTopAxis;
         settings.timeline.showBottomAxis = (timelineObj["showBottomAxis"] as boolean) ?? defaultSettings.timeline.showBottomAxis;
         settings.timeline.showCrosshair = (timelineObj["showCrosshair"] as boolean) ?? defaultSettings.timeline.showCrosshair;
+        settings.timeline.showTodayLine = (timelineObj["showTodayLine"] as boolean) ?? defaultSettings.timeline.showTodayLine;
         settings.timeline.showLabels = (timelineObj["showLabels"] as boolean) ?? defaultSettings.timeline.showLabels;
+        settings.timeline.sortOptions = typeof settings.timeline.sortOptions === "string" && settings.timeline.sortOptions.trim()
+            ? settings.timeline.sortOptions
+            : defaultSettings.timeline.sortOptions;
 
         settings.timeline.lanePadding = Math.max(0, Math.min(0.9, settings.timeline.lanePadding));
         settings.timeline.barCornerRadius = Math.max(0, Math.min(24, settings.timeline.barCornerRadius));
