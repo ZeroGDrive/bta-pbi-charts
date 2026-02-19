@@ -13,8 +13,6 @@ import DataViewCategoryColumn = powerbi.DataViewCategoryColumn;
 
 import {
     d3,
-    createExportControl,
-    ExportControl,
     RenderContext,
     createColorSchemeCard,
     createDataColorsCard,
@@ -338,7 +336,6 @@ export class Visual implements IVisual {
     private canSortByRegion: boolean = false;
     private lastUpdateOptions: VisualUpdateOptions | null = null;
     private sortControlReservePx: number = 0;
-    private exportControl: ExportControl;
 
     private static readonly MIN_CONTENT_WIDTH: number = 900;
     private static readonly MAX_CONTENT_WIDTH: number = 300000;
@@ -407,12 +404,6 @@ export class Visual implements IVisual {
         this.container = this.svg.append("g")
             .classed("chart-container", true);
 
-        this.exportControl = createExportControl({
-            host: this.host,
-            root: this.target,
-            fileNamePrefix: "world-history-timeline"
-        });
-
         this.ensureSortControl();
     }
 
@@ -432,15 +423,6 @@ export class Visual implements IVisual {
             const viewportChanged = width !== this.lastViewportWidth || height !== this.lastViewportHeight;
             this.target.style.overflowX = "auto";
             this.target.style.overflowY = "auto";
-            this.exportControl.setSnapshotSource({
-                svgElement: this.svg.node(),
-                viewportWidth: width,
-                viewportHeight: height,
-                scrollLeft: this.target.scrollLeft || 0,
-                scrollTop: this.target.scrollTop || 0
-            });
-            this.exportControl.setHasData(false);
-            void this.exportControl.refreshCapability();
 
             this.svg.on("mouseleave", () => {
                 this.htmlTooltip?.hide();
@@ -562,7 +544,6 @@ export class Visual implements IVisual {
             chartData.categoryColorMap = seededColors;
 
             this.renderer.render(chartData, effectiveSettings);
-            this.exportControl.setHasData(true);
             this.syncPinnedLayers();
             this.bindInteractions();
             this.syncSelectionStateFromManager("postRenderSync");
@@ -1553,7 +1534,6 @@ export class Visual implements IVisual {
             document.removeEventListener("mousedown", this.onDocumentPointerDown, true);
         }
         try {
-            this.exportControl.destroy();
             this.htmlTooltip?.destroy();
             this.htmlTooltip = null;
             this.target.querySelectorAll('[data-bta-tooltip="true"]').forEach(el => el.remove());

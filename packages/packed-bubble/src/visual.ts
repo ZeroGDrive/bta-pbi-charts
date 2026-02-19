@@ -12,8 +12,6 @@ import ISelectionId = powerbi.visuals.ISelectionId;
 
 import {
     d3,
-    createExportControl,
-    ExportControl,
     RenderContext,
     createBubbleSettingsCard,
     createColorSchemeCard,
@@ -53,7 +51,6 @@ export class Visual implements IVisual {
     private categories: string[] = [];
     private categoryColors: Map<string, string> = new Map();
     private categoryFieldIndex: number = -1;
-    private exportControl: ExportControl;
 
     constructor(options: VisualConstructorOptions) {
         this.host = options.host;
@@ -79,12 +76,6 @@ export class Visual implements IVisual {
 
         this.container = this.svg.append("g")
             .classed("chart-container", true);
-
-        this.exportControl = createExportControl({
-            host: this.host,
-            root: this.target,
-            fileNamePrefix: "packed-bubble"
-        });
     }
 
     public update(options: VisualUpdateOptions) {
@@ -102,15 +93,6 @@ export class Visual implements IVisual {
         const height = options.viewport.height;
 
         this.svg.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
-        this.exportControl.setSnapshotSource({
-            svgElement: this.svg.node(),
-            viewportWidth: width,
-            viewportHeight: height,
-            scrollLeft: this.target.scrollLeft || 0,
-            scrollTop: this.target.scrollTop || 0
-        });
-        this.exportControl.setHasData(false);
-        void this.exportControl.refreshCapability();
 
         // Hide tooltip when mouse leaves the chart entirely
         this.svg.on("mouseleave", () => {
@@ -169,7 +151,6 @@ export class Visual implements IVisual {
         chartData.categoryColorMap = this.categoryColors;
 
         // Render the chart
-        this.exportControl.setHasData(true);
         this.renderer.render(chartData, this.settings);
         this.bindInteractions();
         } catch (error) {
@@ -310,7 +291,6 @@ export class Visual implements IVisual {
 
     public destroy(): void {
         try {
-            this.exportControl.destroy();
             this.htmlTooltip?.destroy();
             this.htmlTooltip = null;
             this.target.querySelectorAll('[data-bta-tooltip="true"]').forEach(el => el.remove());

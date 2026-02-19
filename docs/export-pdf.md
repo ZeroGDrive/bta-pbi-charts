@@ -1,66 +1,34 @@
-# PDF export rollout (custom visuals)
+# PDF export (official Power BI flow)
 
 ## Scope
 
-This repo now supports **per-visual PDF download** for all visuals via an in-canvas button.
+This repository relies on the official Power BI report export path for PDF output.
 
-Implemented visuals:
+- Full-page/report export is handled by Power BI host functionality.
+- Custom visuals in this repo do **not** provide in-visual custom file download buttons.
 
-- Bollinger Bands
-- Bump Chart
-- Calendar Heatmap
-- Donut Chart
-- Heatmap
-- Inline Labels Line
-- Packed Bubble
-- Streamgraph
-- World History Timeline
+## Recommended production path
 
-## How it works
+1. Publish the report to Power BI Service.
+2. Use native report export:
+   - `File -> Export -> PDF`
+3. For API automation, use Power BI Export To File API at report/page level.
 
-- Each visual creates a shared export control (`Download PDF`) in the top-right corner.
-- Export captures the **visible SVG viewport** (not hidden scrolled areas) and renders it to a PNG canvas.
-- PNG bytes are embedded into a single-page PDF (`pdf-lib`).
-- The visual triggers Power BI download via `host.downloadService.exportVisualsContentExtended(...)` with `fileType = "pdf"`.
+## Certification note
 
-File naming format:
+For custom visuals, report export fidelity in official Power BI export flows depends on Microsoft certification and distribution requirements.
 
-- `<visual-name>-YYYYMMDD-HHmmss.pdf`
+If a visual is not eligible in a given environment, exported reports may show placeholders instead of visual output.
 
-## Privileges and behavior
+## What was removed
 
-All `capabilities.json` files now declare:
-
-```json
-"privileges": [
-  { "name": "ExportContent" }
-]
-```
-
-Runtime behavior by privilege status:
-
-- `Allowed`: button enabled.
-- `NotDeclared`: button disabled with tooltip.
-- `NotSupported`: button disabled with tooltip.
-- `DisabledByAdmin`: button disabled with tooltip.
-
-No-data behavior:
-
-- Button is disabled and shows a no-data tooltip.
-
-## Important distinction
-
-- **This feature:** in-visual PDF file download.
-- **Not this feature:** Power BI report-level export (`File -> Export -> PDF`).
-
-Report-level export behavior for custom visuals is governed by Power BI certification/distribution requirements and should be validated after certification rollout.
+- In-visual custom PDF download controls.
+- `ExportContent` privilege declarations used for custom file download.
+- Shared custom SVG->PDF export pipeline.
 
 ## Validation checklist
 
 1. `bun run build:shared`
 2. `bun run build:all`
-3. Start any visual (`bun run start:<visual>`) and verify:
-   - button appears,
-   - button is enabled when data exists and privilege is allowed,
-   - generated PDF opens and matches the visible chart region.
-4. Validate disabled tooltip states in environments where privilege is unavailable.
+3. Open report in Power BI Service/Desktop and test native report export.
+4. Confirm exported PDF includes expected visuals according to tenant/certification status.

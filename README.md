@@ -72,13 +72,10 @@ Each visual shows a setup screen when required fields aren’t bound, with role-
 
 ## PDF export
 
-- Every visual now includes an in-canvas **Download PDF** button (top-right).
-- The button exports a snapshot of the visible chart viewport as a single-page PDF.
-- Export availability depends on Power BI privilege status for `ExportContent`:
-  - If allowed, the button is enabled.
-  - If denied/unsupported/admin-disabled, the button stays disabled with an explanatory tooltip.
-- This is separate from report-level **Export to PDF** in Power BI Service/Desktop.
-  - Native report export rendering for custom visuals still depends on certification/distribution requirements.
+- This repo uses the **official Power BI report export flow** for PDF.
+- Full-page export is performed by Power BI host/report export (`File -> Export -> PDF`), not by per-visual custom download buttons.
+- Custom visuals in exported reports must satisfy Microsoft certification/distribution requirements for reliable rendering in exported files.
+- For operational guidance, see `docs/export-pdf.md`.
 
 ## npm (fallback)
 

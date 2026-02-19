@@ -12,8 +12,6 @@ import ISelectionId = powerbi.visuals.ISelectionId;
 
 import {
     d3,
-    createExportControl,
-    ExportControl,
     RenderContext,
     createColorSchemeCard,
     createGradientColorsCard,
@@ -44,7 +42,6 @@ export class Visual implements IVisual {
     private emptySelectionId: ISelectionId;
     private allowInteractions: boolean;
     private readonly onTargetScroll: () => void;
-    private exportControl: ExportControl;
 
     constructor(options: VisualConstructorOptions) {
         this.host = options.host;
@@ -76,12 +73,6 @@ export class Visual implements IVisual {
 
         this.container = this.svg.append("g")
             .classed("chart-container", true);
-
-        this.exportControl = createExportControl({
-            host: this.host,
-            root: this.target,
-            fileNamePrefix: "heatmap"
-        });
     }
 
     public update(options: VisualUpdateOptions) {
@@ -102,15 +93,6 @@ export class Visual implements IVisual {
         this.target.style.overflowY = "hidden";
 
         this.svg.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
-        this.exportControl.setSnapshotSource({
-            svgElement: this.svg.node(),
-            viewportWidth: width,
-            viewportHeight: height,
-            scrollLeft: this.target.scrollLeft || 0,
-            scrollTop: this.target.scrollTop || 0
-        });
-        this.exportControl.setHasData(false);
-        void this.exportControl.refreshCapability();
 
         // Hide tooltip when mouse leaves the chart entirely
         this.svg.on("mouseleave", () => {
@@ -165,7 +147,6 @@ export class Visual implements IVisual {
         }
 
         // Render the chart
-        this.exportControl.setHasData(true);
         this.renderer.render(chartData, this.settings);
         this.syncPinnedLayers();
         this.bindInteractions();
@@ -288,7 +269,6 @@ export class Visual implements IVisual {
     public destroy(): void {
         this.target.removeEventListener("scroll", this.onTargetScroll);
         try {
-            this.exportControl.destroy();
             this.htmlTooltip?.destroy();
             this.htmlTooltip = null;
             this.target.querySelectorAll('[data-bta-tooltip="true"]').forEach(el => el.remove());
